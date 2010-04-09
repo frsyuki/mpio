@@ -1,5 +1,6 @@
 #include <mp/wavy.h>
 #include <mp/functional.h>
+#include <mp/signal.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -21,7 +22,9 @@ bool signal_handler(int signo, int* count, mp::wavy::loop* lo)
 
 int main(void)
 {
-	signal(SIGUSR1, SIG_IGN);
+	signal(SIGUSR1, SIG_IGN);     // kqueue compatibility
+	mp::scoped_sigprocmask mask(  // epoll compatibility
+			mp::sigset().add(SIGUSR1));
 
 	mp::wavy::loop lo;
 
