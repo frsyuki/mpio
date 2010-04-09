@@ -61,31 +61,65 @@
 //
 //	size_t max() const;
 //
-//	struct event;
+//
+//	struct event {
+//		int ident() const;
+//	};
+//
 //
 //	int add_fd(int fd, short event);
 //	int remove_fd(int fd, short event);
 //
-//	struct timer;
-//	int create_timer(timer* tm, const timespec* value, const timespec* interval);
-//	int add_timer(timer* tm);
+//
+//	class timer {
+//	public:
+//		timer();
+//		~timer();
+//		int ident() const;
+//	private:
+//		signal(const signal&);
+//	};
+//
+//	int add_timer(timer* tm, const timespec* value, const timespec* interval);
 //	int remove_timer(int ident);
 //	static int read_timer(event e);
 //
-//	struct signal;
-//	int create_signal(signal* sg, int signo);
-//	int add_signal(signal* sg);
+//
+//	class signal {
+//	public:
+//		signal();
+//		~signal();
+//		int ident() const { return xident; }
+//	private:
+//		signal(const signal&);
+//	};
+//
+//	int add_signal(signal* sg, int signo);
 //	int remove_signal(int ident);
 //	static int read_signal(event e);
+//
 //
 //	int add_kernel(kernel* pt);
 //	int ident() const;
 //
-//	struct backlog;
+//
+//	class backlog {
+//	public:
+//		backlog();
+//		~backlog();
+//		event operator[] (int n) const;
+//	private:
+//		backlog(const backlog&);
+//	};
+//
 //	int wait(backlog* result);
 //	int wait(backlog* result, int timeout_msec);
+//
 //	int reactivate(event e);
 //	int remove(event e);
+//
+//private:
+//	kernel(const kernel&);
 //};
 
 #endif /* wavy_kernel.h */

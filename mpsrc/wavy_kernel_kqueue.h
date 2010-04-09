@@ -105,7 +105,7 @@ private:
 
 
 public:
-	struct event {
+	class event {
 	public:
 		event() { }
 		explicit event(struct kevent kev_) : kev(kev_) { }
@@ -135,7 +135,7 @@ public:
 	}
 
 
-	struct timer {
+	class timer {
 	public:
 		timer() : xident(-1) { }
 		~timer() {
@@ -194,11 +194,11 @@ public:
 
 	static int read_timer(event e)
 	{
-		return e.kev.data;
+		return 0;
 	}
 
 
-	struct signal {
+	class signal {
 	public:
 		signal() : xident(-1) { }
 		~signal() {
@@ -244,7 +244,7 @@ public:
 
 	static int read_signal(event e)
 	{
-		return e.kev.data;
+		return 0;
 	}
 
 
@@ -262,7 +262,8 @@ public:
 	}
 
 
-	struct backlog {
+	class backlog {
+	public:
 		backlog()
 		{
 			buf = (struct kevent*)::calloc(

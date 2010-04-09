@@ -69,7 +69,7 @@ public:
 	}
 
 
-	struct event {
+	class event {
 	public:
 		event() { }
 		explicit event(uint64_t data) : m_data(data) { }
@@ -101,7 +101,7 @@ public:
 	}
 
 
-	struct timer {
+	class timer {
 	public:
 		timer() : fd(-1) { }
 		~timer() {
@@ -164,11 +164,11 @@ public:
 		if(read(e.ident(), &exp, sizeof(uint64_t)) <= 0) {
 			return -1;
 		}
-		return exp & 0x7fffffff;
+		return 0;
 	}
 
 
-	struct signal {
+	class signal {
 	public:
 		signal() : fd(-1) { }
 		~signal() {
@@ -237,7 +237,8 @@ public:
 	}
 
 
-	struct backlog {
+	class backlog {
+	public:
 		backlog()
 		{
 			buf = (struct epoll_event*)::calloc(
