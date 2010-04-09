@@ -16,6 +16,9 @@ libmpio_include_HEADERS = \
 		stream_buffer.h \
 		sync.h \
 		tls_set.h \
+		unordered.h \
+		unordered_map.h \
+		unordered_set.h \
 		utilize.h \
 		wavy.h
 
