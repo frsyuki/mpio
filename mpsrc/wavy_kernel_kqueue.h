@@ -111,7 +111,12 @@ public:
 		explicit event(struct kevent kev_) : kev(kev_) { }
 		~event() { }
 
-		int ident() const { return kev.ident; }
+		int ident() const {
+			if(kev.filter == EVFILT_SIGNAL) {
+				return (int)(intptr_t)kev.udata;
+			}
+			return kev.ident;
+		}
 
 	private:
 		struct kevent kev;
@@ -221,8 +226,8 @@ public:
 			return -1;
 		}
 
-		if(set_event(xident, EVFILT_SIGNAL, EV_ADD|EV_ONESHOT, 0,
-					signo, (void*)signo) < 0) {
+		if(set_event(signo,EVFILT_SIGNAL, EV_ADD|EV_ONESHOT, 0,
+					0, (void*)xident) < 0) {
 			free_xident(xident);
 			return -1;
 		}
@@ -307,15 +312,16 @@ public:
 			return add_fd(e.ident(), EVFILT_WRITE);
 
 		case EVFILT_TIMER: {
-				unsigned long data = (unsigned long)e.kev.udata;
+				unsigned long data = (uintptr_t)e.kev.udata;
 				return set_event(e.ident(), EVFILT_TIMER,
 						EV_ADD|EV_ONESHOT, 0, data, (void*)data);
 			}
 
 		case EVFILT_SIGNAL: {
-				int signo = (long)e.kev.udata;
-				return set_event(e.ident(), EVFILT_SIGNAL,
-						EV_ADD|EV_ONESHOT, 0, signo, (void*)signo);
+				int signo = (long)e.kev.ident;
+				void* xident = e.kev.udata;
+				return set_event(signo, EVFILT_SIGNAL,
+						EV_ADD|EV_ONESHOT, 0, 0, xident);
 			}
 
 		default:
