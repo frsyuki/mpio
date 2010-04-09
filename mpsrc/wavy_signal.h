@@ -19,6 +19,7 @@
 #define WAVY_SIGNAL_H__
 
 #include "wavy_loop.h"
+#include "mp/signal.h"
 #include <signal.h>
 
 namespace mp {
@@ -60,7 +61,9 @@ public:
 				signal_callback_t callback) :
 		kernel_signal(kern, signo),
 		basic_handler(signal_ident(), this),
-		m_signo(signo), m_callback(callback)
+		m_signo(signo), m_callback(callback),
+		m_signal(signo, SIG_IGN),
+		m_sigmask(sigset().add(signo))
 	{ }
 
 	~signal_handler() { }
@@ -68,12 +71,14 @@ public:
 	bool operator() (event& e)
 	{
 		read_signal(e);
-		return m_callback(m_signo);
+		return m_callback();
 	}
 
 private:
 	int m_signo;
 	signal_callback_t m_callback;
+	scoped_signal m_signal;
+	scoped_sigprocmask m_sigmask;
 };
 
 

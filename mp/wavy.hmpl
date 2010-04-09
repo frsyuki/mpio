@@ -108,7 +108,7 @@ public:
 	void remove_timer(int ident);
 
 
-	typedef function<bool (int signo)> signal_callback_t;
+	typedef function<bool ()> signal_callback_t;
 
 	int add_signal(int signo, signal_callback_t callback);
 

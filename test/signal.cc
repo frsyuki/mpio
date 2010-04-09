@@ -8,7 +8,7 @@
 
 using namespace mp::placeholders;
 
-bool signal_handler(int signo, int* count, mp::wavy::loop* lo)
+bool signal_handler(int* count, mp::wavy::loop* lo)
 {
 	std::cout << "signal" << std::endl;
 
@@ -22,15 +22,13 @@ bool signal_handler(int signo, int* count, mp::wavy::loop* lo)
 
 int main(void)
 {
-	signal(SIGUSR1, SIG_IGN);     // kqueue compatibility
-	mp::scoped_sigprocmask mask(  // epoll compatibility
-			mp::sigset().add(SIGUSR1));
-
 	mp::wavy::loop lo;
 
 	int count = 0;
+
+	// add signal handler before starting any other threads.
 	lo.add_signal(SIGUSR1, mp::bind(
-				&signal_handler, _1, &count, &lo));
+				&signal_handler, &count, &lo));
 
 	lo.start(3);
 

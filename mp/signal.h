@@ -92,34 +92,70 @@ private:
 };
 
 
+class scoped_signal {
+public:
+	scoped_signal(int signo, void (*handler)(int)) :
+		m_signo(signo)
+	{
+		struct sigaction act;
+		memset(&act, 0, sizeof(act));
+		act.sa_handler = handler;
+		sigemptyset(&act.sa_mask);
+		act.sa_flags = SA_RESTART;
+		if(sigaction(m_signo, &act, &m_save) < 0) {
+			throw system_error(errno, "failed to set signal handler");
+		}
+	}
+
+	~scoped_signal()
+	{
+		sigaction(m_signo, &m_save, NULL);
+	}
+
+	//FIXME
+	//scoped_signal(int signo, function<void (int)> func);
+
+private:
+	int m_signo;
+	struct sigaction m_save;
+
+private:
+	scoped_signal();
+	scoped_signal(const scoped_signal&);
+};
+
+
 class pthread_signal : public pthread_thread {
 public:
-	typedef function<bool (int signo)> handler_t;
+	typedef function<bool ()> handler_t;
 
-	pthread_signal(const sigset& set, handler_t handler) :
-		m_mask(set)
+	pthread_signal(int signo, handler_t handler) :
+		m_signal(signo, SIG_IGN),
+		m_sigmask(sigset().add(signo))
 	{
-		run(mp::bind(&pthread_signal::thread_main, set, handler));
+		run(mp::bind(&pthread_signal::thread_main, signo, handler));
 	}
 
 	~pthread_signal() { }
 
 public:
-	static void thread_main(sigset set, handler_t handler)
+	static void thread_main(int signo, handler_t handler)
 	{
-		int signo;
+		sigset set;
+		set.add(signo);
 		while(true) {
 			if(sigwait(set.get(), &signo) != 0) {
 				signo = -1;
 			}
-			if(!handler(signo)) {
+			if(!handler()) {
 				return;
 			}
 		}
 	}
 
 private:
-	scoped_sigprocmask m_mask;
+	scoped_signal m_signal;
+	scoped_sigprocmask m_sigmask;
 
 private:
 	pthread_signal();
