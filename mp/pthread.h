@@ -21,6 +21,7 @@
 #include "mp/exception.h"
 #include "mp/functional.h"
 #include <pthread.h>
+#include <memory>
 
 namespace mp {
 

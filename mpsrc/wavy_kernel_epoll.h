@@ -194,12 +194,12 @@ public:
 			return -1;
 		}
 
-		if(::fcntl(sg->fd, F_SETFL, O_NONBLOCK) < 0) {
+		if(::fcntl(fd, F_SETFL, O_NONBLOCK) < 0) {
 			::close(fd);
 			return -1;
 		}
 
-		if(add_fd(sg->fd, EVKERNEL_READ) < 0) {
+		if(add_fd(fd, EVKERNEL_READ) < 0) {
 			::close(fd);
 			return -1;
 		}
@@ -210,7 +210,7 @@ public:
 
 	int remove_signal(int ident)
 	{
-		return set_event(ident, EVKERNEL_READ);
+		return remove_fd(ident, EVKERNEL_READ);
 	}
 
 	static int read_signal(event e)

@@ -41,6 +41,7 @@ class basic_handler;
 class handler;
 class event;
 class xfer;
+
 typedef shared_ptr<basic_handler> shared_handler;
 typedef weak_ptr<basic_handler> weak_handler;
 
