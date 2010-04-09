@@ -1,0 +1,126 @@
+//
+// mpio sync
+//
+// Copyright (C) 2009-2010 FURUHASHI Sadayuki
+//
+//    Licensed under the Apache License, Version 2.0 (the "License");
+//    you may not use this file except in compliance with the License.
+//    You may obtain a copy of the License at
+//
+//        http://www.apache.org/licenses/LICENSE-2.0
+//
+//    Unless required by applicable law or agreed to in writing, software
+//    distributed under the License is distributed on an "AS IS" BASIS,
+//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//    See the License for the specific language governing permissions and
+//    limitations under the License.
+//
+#ifndef MP_SYNC_H__
+#define MP_SYNC_H__
+
+#include "mp/pthread.h"
+
+namespace mp {
+
+
+template <typename T>
+class sync {
+public:
+	sync() : m_obj() { }
+%varlen_each do |gen|
+	template <[%gen.template%]>
+	sync([%gen.args%]) : m_obj([%gen.params%]) { }
+%end
+
+	~sync() { }
+
+	T& unsafe_ref() { return m_obj; }
+	const T& unsafe_ref() const { return m_obj; }
+
+	class ref {
+	public:
+		ref(sync<T>& obj) : m_ref(NULL)
+		{
+			obj.m_mutex.lock();
+			m_ref = &obj;
+		}
+	
+		ref() : m_ref(NULL) { }
+	
+		~ref() { reset(); }
+	
+		void reset()
+		{
+			if(m_ref) {
+				m_ref->m_mutex.unlock();
+				m_ref = NULL;
+			}
+		}
+	
+		void reset(sync<T>& obj)
+		{
+			reset();
+			obj.m_mutex.lock();
+			m_ref = &obj;
+		}
+
+		void swap(sync<T>& obj)
+		{
+			sync<T>* tmp = m_ref;
+			m_ref = obj.m_ref;
+			obj.m_ref = tmp;
+		}
+	
+		T& operator*() { return m_ref->m_obj; }
+		T* operator->() { return &operator*(); }
+		const T& operator*() const { return m_ref->m_obj; }
+		const T* operator->() const { return &operator*(); }
+
+		operator bool() const { return m_ref != NULL; }
+	
+	protected:
+		sync<T>* m_ref;
+	
+	private:
+		ref(const ref&);
+	};
+
+	class auto_ref : public ref {
+	public:
+		auto_ref(sync<T>& obj) : ref(obj) { }
+		auto_ref() { }
+		~auto_ref() { }
+
+		auto_ref(auto_ref& o)
+		{
+			ref::m_ref = o.m_ref;
+			o.m_ref = NULL;
+		}
+
+		auto_ref& operator= (auto_ref& o)
+		{
+			auto_ref(o).swap(*this);
+			return *this;
+		}
+	};
+
+	auto_ref lock()
+	{
+		return auto_ref(*this);
+	}
+
+private:
+	T m_obj;
+	pthread_mutex m_mutex;
+	friend class ref;
+
+private:
+	sync(const sync&);
+};
+
+
+}  // namespace mp
+
+#endif /* mp/sync.h */
+
+%# vim: filetype=mplex

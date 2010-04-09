@@ -1,0 +1,222 @@
+//
+// mp::sparse_array
+//
+// Copyright (C) 2008-2010 FURUHASHI Sadayuki
+//
+//    Licensed under the Apache License, Version 2.0 (the "License");
+//    you may not use this file except in compliance with the License.
+//    You may obtain a copy of the License at
+//
+//        http://www.apache.org/licenses/LICENSE-2.0
+//
+//    Unless required by applicable law or agreed to in writing, software
+//    distributed under the License is distributed on an "AS IS" BASIS,
+//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//    See the License for the specific language governing permissions and
+//    limitations under the License.
+//
+#ifndef MP_SPARSE_ARRAY_H__
+#define MP_SPARSE_ARRAY_H__
+
+#include <vector>
+#include <cstdlib>
+
+namespace mp {
+
+
+template <typename T>
+class sparse_array {
+public:
+	typedef size_t size_type;
+
+	sparse_array();
+	~sparse_array();
+
+	//! Set instance of T into index.
+	inline T& set(size_type index);
+%varlen_each do |gen|
+	template <[%gen.template%]>
+	inline T& set(size_type index, [%gen.args%]);
+%end
+
+	//! Reset index.
+	inline void reset(size_type index);
+
+	//! Get the data of index.
+	inline T& data(size_type index);
+	inline const T& data(size_type index) const;
+
+	//! Get the data of index.
+	inline T* get(size_type index);
+	inline const T* get(size_type index) const;
+
+	//! Return true if index is set otherwise false.
+	inline bool test(size_type index) const;
+
+	inline size_type capacity() const;
+
+private:
+	static const size_t EXTEND_ARRAY_SIZE = 64;
+
+	struct item_t {
+		bool enable;
+		char data[sizeof(T)];
+	};
+
+	typedef std::vector<item_t*> base_array_t;
+	base_array_t base_array;
+
+private:
+	inline void* set_impl(size_type index);
+	inline void revert(size_type index);
+	inline void extend_array();
+	inline item_t& item_of(size_type index);
+	inline const item_t& item_of(size_type index) const;
+};
+
+
+template <typename T>
+sparse_array<T>::sparse_array()
+{
+	extend_array();
+}
+
+template <typename T>
+sparse_array<T>::~sparse_array()
+{
+	for(typename base_array_t::iterator it(base_array.begin()), it_end(base_array.end());
+			it != it_end;
+			++it ) {
+		for(item_t *p(*it), *p_end(p+EXTEND_ARRAY_SIZE); p != p_end; ++p) {
+			if(p->enable) {
+				reinterpret_cast<T*>(p->data)->~T();
+			}
+		}
+		std::free(*it);
+	}
+}
+
+template <typename T>
+T& sparse_array<T>::set(size_type index)
+try {
+	return *(new (set_impl(index)) T());
+} catch (...) {
+	revert(index);
+	throw;
+}
+%varlen_each do |gen|
+template <typename T>
+template <[%gen.template%]>
+T& sparse_array<T>::set(size_type index, [%gen.args%])
+try {
+	return *(new (set_impl(index)) T([%gen.params%]));
+} catch (...) {
+	revert(index);
+	throw;
+}
+%end
+
+template <typename T>
+void sparse_array<T>::reset(size_type index)
+{
+	item_t& item(item_of(index));
+	item.enable = false;
+	reinterpret_cast<T*>(item.data)->~T();
+}
+
+template <typename T>
+T& sparse_array<T>::data(size_type index)
+{
+	return *reinterpret_cast<T*>(item_of(index).data);
+}
+
+template <typename T>
+const T& sparse_array<T>::data(size_type index) const
+{
+	return *reinterpret_cast<const T*>(item_of(index).data);
+}
+
+template <typename T>
+T* sparse_array<T>::get(size_type index)
+{
+	if( base_array.size() * EXTEND_ARRAY_SIZE > index ) {
+		item_t& item(item_of(index));
+		if( item.enable ) {
+			return reinterpret_cast<T*>(item.data);
+		}
+	}
+	return NULL;
+}
+
+template <typename T>
+const T* sparse_array<T>::get(size_type index) const
+{
+	if( base_array.size() * EXTEND_ARRAY_SIZE > index ) {
+		item_t& item(item_of(index));
+		if( item.enable ) {
+			return reinterpret_cast<const T*>(item.data);
+		}
+	}
+	return NULL;
+}
+
+template <typename T>
+bool sparse_array<T>::test(size_type index) const
+{
+	return base_array.size() * EXTEND_ARRAY_SIZE > index &&
+		item_of(index).enable;
+}
+
+template <typename T>
+typename sparse_array<T>::size_type sparse_array<T>::capacity() const
+{
+	return base_array.size() * EXTEND_ARRAY_SIZE;
+}
+
+template <typename T>
+void* sparse_array<T>::set_impl(size_type index)
+{
+	while( base_array.size() <= index / EXTEND_ARRAY_SIZE ) {
+		extend_array();
+	}
+	item_t& item(item_of(index));
+	if( item.enable ) {
+		reinterpret_cast<T*>(item.data)->~T();
+	} else {
+		item.enable = true;
+	}
+	return item.data;
+}
+
+template <typename T>
+void sparse_array<T>::revert(size_type index)
+{
+	item_of(index).enable = false;
+}
+
+template <typename T>
+void sparse_array<T>::extend_array()
+{
+	item_t* ex = (item_t*)std::calloc(EXTEND_ARRAY_SIZE, sizeof(item_t));
+	if(!ex) { throw std::bad_alloc(); }
+	base_array.push_back(ex);
+}
+
+template <typename T>
+typename sparse_array<T>::item_t& sparse_array<T>::item_of(size_type index)
+{
+	return base_array[index / EXTEND_ARRAY_SIZE][index % EXTEND_ARRAY_SIZE];
+}
+
+template <typename T>
+const typename sparse_array<T>::item_t& sparse_array<T>::item_of(size_type index) const
+{
+	return base_array[index / EXTEND_ARRAY_SIZE][index % EXTEND_ARRAY_SIZE];
+}
+
+
+}  // namespace mp
+
+#endif /* mp/sparse_array.h */
+
+%# vim: filetype=mplex
