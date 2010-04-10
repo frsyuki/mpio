@@ -75,18 +75,18 @@ private:
 	int alloc_xident()
 	{
 		for(unsigned int i=0; i < MP_WAVY_KERNEL_KQUEUE_XIDENT_MAX*2; ++i) {
-			unsigned int ident = __sync_fetch_and_add(&m_xident_index, 1) % MP_WAVY_KERNEL_KQUEUE_XIDENT_MAX;
-			if(__sync_bool_compare_and_swap(&m_xident[ident], false, true)) {
-				return ident;
+			unsigned int x = __sync_fetch_and_add(&m_xident_index, 1) % MP_WAVY_KERNEL_KQUEUE_XIDENT_MAX;
+			if(__sync_bool_compare_and_swap(&m_xident[x], false, true)) {
+				return m_fdmax + x;
 			}
 		}
 		errno = EMFILE;
 		return -1;
 	}
 
-	bool free_xident(int ident)
+	bool free_xident(int xident)
 	{
-		bool* xv = m_xident + ident;
+		bool* xv = m_xident + (xident - m_fdmax);
 		// FIXME cas?
 		if(*xv) {
 			*xv = false;

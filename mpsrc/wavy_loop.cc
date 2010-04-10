@@ -242,14 +242,12 @@ void loop_impl::thread_main()
 		int ident = ke.ident();
 
 		if(ident == m_out->ident()) {
-
 			m_out->poll_event();
 			lk.unlock();
 
 			m_kernel.reactivate(ke);
 
 		} else {
-
 			lk.unlock();
 
 			event_impl e(this, ke);
@@ -315,6 +313,7 @@ void loop_impl::run_once()
 		lk.unlock();
 
 		int num = m_kernel.wait(&m_backlog, 1000);
+
 		if(num <= 0) {
 			if(num == 0 || errno == EINTR || errno == EAGAIN) {
 				m_pollable = true;

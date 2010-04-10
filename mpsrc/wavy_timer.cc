@@ -35,7 +35,8 @@ int loop::add_timer(const timespec* value, const timespec* interval,
 
 static inline struct timespec sec2spec(double sec)
 {
-	struct timespec spec = { (time_t)sec, (long)(sec * 1e9) };
+	struct timespec spec = {
+		sec, ((sec - (double)(time_t)sec) * 1e9) };
 	return spec;
 }
 
