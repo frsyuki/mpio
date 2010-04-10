@@ -253,17 +253,17 @@ void loop_impl::thread_main()
 			lk.unlock();
 
 			event_impl e(this, ke);
+			shared_handler h = m_state[ident];
 
-			bool cont;
-			try {
-				cont = (*m_state[ident])(e);
-			} catch (...) {
-				cont = false;
+			bool cont = false;
+			if(h) {
+				try {
+					cont = (*h)(e);
+				} catch (...) { }
 			}
 
 			if(!e.is_reactivated()) {
 				if(e.is_removed()) {
-					reset_handler(ident);
 					goto retry;
 				}
 				if(!cont) {
@@ -347,20 +347,20 @@ void loop_impl::run_once()
 		lk.unlock();
 
 		event_impl e(this, ke);
+		shared_handler h = m_state[ident];
 
-		bool cont;
-		try {
-			cont = (*m_state[ident])(e);
-		} catch (...) {
-			cont = false;
+		bool cont = false;
+		if(h) {
+			try {
+				cont = (*h)(e);
+			} catch (...) { }
 		}
 
 		if(!e.is_reactivated()) {
+			if(e.is_removed()) {
+				return;
+			}
 			if(!cont) {
-				if(e.is_removed()) {
-					reset_handler(ident);
-					return;
-				}
 				m_kernel.remove(ke);
 				reset_handler(ident);
 				return;
@@ -386,6 +386,7 @@ void loop_impl::event_next(kernel::event ke)
 void loop_impl::event_remove(kernel::event ke)
 {
 	m_kernel.remove(ke);
+	reset_handler(ke.ident());
 }
 
 

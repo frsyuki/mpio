@@ -76,6 +76,7 @@ public:
 		fd = -1;
 
 	out:
+		e.remove();
 		m_callback(fd, err);
 		return false;
 	}
@@ -170,7 +171,10 @@ void loop::connect(
 	}
 
 	try {
-		shared_ptr<connect_handler::timeout_handler> timer(new connect_handler::timeout_handler(ANON_impl->get_kernel(), timeout, sh));
+		shared_ptr<connect_handler::timeout_handler> timer(
+				new connect_handler::timeout_handler(
+					ANON_impl->get_kernel(), timeout, sh));
+
 		ANON_impl->set_handler(timer);
 
 		sh->set_timer(this, timer);
