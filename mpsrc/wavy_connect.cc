@@ -30,6 +30,129 @@ namespace wavy {
 namespace {
 
 
+class connect_task {
+public:
+	typedef loop::connect_callback_t connect_callback_t;
+
+	struct pack {
+		int        socket_family;
+		int        socket_type;
+		int        protocol;
+		socklen_t  addrlen;
+		int        timeout_msec;
+		sockaddr   addr[0];
+	};
+
+	connect_task(
+			int socket_family, int socket_type, int protocol,
+			const sockaddr* addr, socklen_t addrlen,
+			const timespec* timeout, connect_callback_t& callback) :
+		m((pack*)::malloc(sizeof(pack)+addrlen)),
+		m_callback(callback)
+	{
+		if(!m) { throw std::bad_alloc(); }
+		m->socket_family = socket_family;
+		m->socket_type   = socket_type;
+		m->protocol      = protocol;
+		m->addrlen       = addrlen;
+		if(timeout && (timeout->tv_sec && timeout->tv_nsec)) {
+			m->timeout_msec  = timeout->tv_sec + timeout->tv_nsec * 1e6;
+		} else {
+			m->timeout_msec  = -1;
+		}
+		::memcpy(m->addr, addr, addrlen);
+	}
+
+	void operator() ()
+	{
+		int err = 0;
+		int fd = ::socket(m->socket_family, m->socket_type, m->protocol);
+		if(fd < 0) {
+			err = errno;
+			goto out;
+		}
+
+		if(::fcntl(fd, F_SETFL, O_NONBLOCK) < 0) {
+			goto errno_error;
+		}
+
+		if(::connect(fd, m->addr, m->addrlen) >= 0) {
+			// connect success
+			goto out;
+		}
+
+		if(errno != EINPROGRESS) {
+			goto errno_error;
+		}
+
+		while(true) {
+			struct pollfd pf = {fd, POLLOUT, 0};
+			int ret = ::poll(&pf, 1, m->timeout_msec);
+			if(ret < 0) {
+				if(errno == EINTR) { continue; }
+				goto errno_error;
+			}
+
+			if(ret == 0) {
+				errno = ETIMEDOUT;
+				goto specific_error;
+			}
+
+			{
+				int value = 0;
+				int len = sizeof(value);
+				if(::getsockopt(fd, SOL_SOCKET, SO_ERROR,
+						&value, (socklen_t*)&len) < 0) {
+					goto errno_error;
+				}
+				if(value != 0) {
+					err = value;
+					goto specific_error;
+				}
+				goto out;
+			}
+		}
+
+	errno_error:
+		err = errno;
+
+	specific_error:
+		::close(fd);
+		fd = -1;
+
+	out:
+		::free(m);
+		m_callback(fd, err);
+	}
+
+private:
+	pack* m;
+	connect_callback_t m_callback;
+
+private:
+	connect_task();
+};
+
+
+}  // noname namespace
+
+
+void loop::connect(
+		int socket_family, int socket_type, int protocol,
+		const sockaddr* addr, socklen_t addrlen,
+		const timespec* timeout, connect_callback_t callback)
+{
+	connect_task t(
+			socket_family, socket_type, protocol,
+			addr, addrlen, timeout, callback);
+	submit(t);
+}
+
+
+#if 0
+namespace {
+
+
 class connect_handler : public basic_handler {
 public:
 	typedef loop::connect_callback_t connect_callback_t;
@@ -159,6 +282,7 @@ void loop::connect(
 	}
 
 	try {
+		// FIXME EVKERNEL_WRITE
 		sh = add_handler<connect_handler>(fd, callback);
 	} catch (...) {
 		err = 0;
@@ -200,6 +324,7 @@ specific_error:
 out:
 	submit(callback, fd, err);
 }
+#endif
 
 
 void loop::connect(
@@ -207,7 +332,9 @@ void loop::connect(
 		const sockaddr* addr, socklen_t addrlen,
 		double timeout_sec, connect_callback_t callback)
 {
-	struct timespec timeout = { (time_t)timeout_sec, (long)(timeout_sec * 1e9) };
+	struct timespec timeout = {
+		timeout_sec,
+		((timeout_sec - (double)(time_t)timeout_sec) * 1e9) };
 	return connect(socket_family, socket_type, protocol,
 			addr, addrlen, &timeout, callback);
 }
