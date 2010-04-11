@@ -223,12 +223,12 @@ public:
 	}
 
 
-	int add_kernel(kernel* pt)
+	int add_kernel(kernel* kern)
 	{
-		if(add_fd(pt->m_ep, EVKERNEL_READ) < 0) {
+		if(add_fd(kern->m_ep, EVKERNEL_READ) < 0) {
 			return -1;
 		}
-		return pt->m_ep;
+		return kern->m_ep;
 	}
 
 	int ident() const

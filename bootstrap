@@ -38,6 +38,9 @@ test -f ChangeLog || touch ChangeLog
 test -f NEWS      || touch NEWS
 test -f README    || touch README
 
+if ! ./preprocess.sh; then
+	exit 1
+fi
 
 ACLOCAL="aclocal"
 ACLOCAL_FILES="aclocal.m4"

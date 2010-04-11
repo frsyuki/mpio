@@ -586,7 +586,6 @@ void loop::hvsendfile(int fd,
 }
 
 
-void kak() { }
 }  // namespace wavy
 }  // namespace mp
 
