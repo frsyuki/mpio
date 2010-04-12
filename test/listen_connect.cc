@@ -28,7 +28,7 @@ void connected(int fd, int err)
 {
 	if(fd < 0) {
 		errno = err;
-		perror("accept error");
+		perror("connect error");
 		return;
 	}
 

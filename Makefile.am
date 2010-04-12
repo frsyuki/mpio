@@ -9,3 +9,13 @@ prep: mpl.rb
 prepc:
 	cd mp && $(MAKE) prepc
 
+DOC_FILES = \
+		README.md \
+		NOTICE
+
+EXTRA_DIST = \
+		$(DOC_FILES) \
+		mplex \
+		mpl.rb \
+		preprocess
+

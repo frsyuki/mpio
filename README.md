@@ -2,7 +2,24 @@ mpio
 ====
 Multipurpose concurrent I/O framework for C++
 
+
 ## Overview
+
+
+## Installation
+
+Following libraries are required to build mpio:
+
+  - linux >= 2.6.18
+  - g++ >= 4.1
+  - ruby >= 1.8.6
+
+Configure and install in the usual way:
+
+    $ ./bootstrap  # if needed
+    $ ./configure
+    $ make
+    $ sudo make install
 
 
 ## Libraries

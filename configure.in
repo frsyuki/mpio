@@ -2,7 +2,7 @@ AC_INIT(mpsrc/wavy_kernel.h)
 AC_CONFIG_AUX_DIR(ac)
 AC_CANONICAL_TARGET
 
-AM_INIT_AUTOMAKE(mpio, 0.1.0)
+AM_INIT_AUTOMAKE(mpio, 0.3.0)
 AC_CONFIG_HEADER(config.h)
 
 AC_SUBST(CFLAGS)
@@ -12,9 +12,6 @@ AC_SUBST(CXXFLAGS)
 CXXFLAGS="-O4 -Wall $CXXFLAGS"
 
 AC_CHECK_PROG(RUBY, ruby, ruby)
-if test "x$RUBY" = x; then
-	AC_MSG_ERROR([cannot find ruby. Ruby is needed to build.])
-fi
 
 AC_PROG_CC
 AC_PROG_CXX

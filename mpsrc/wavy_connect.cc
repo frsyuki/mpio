@@ -73,7 +73,7 @@ public:
 		}
 
 		if(::fcntl(fd, F_SETFL, O_NONBLOCK) < 0) {
-			goto errno_error;
+			goto error;
 		}
 
 		if(::connect(fd, m->addr, m->addrlen) >= 0) {
@@ -82,7 +82,7 @@ public:
 		}
 
 		if(errno != EINPROGRESS) {
-			goto errno_error;
+			goto error;
 		}
 
 		while(true) {
@@ -90,12 +90,12 @@ public:
 			int ret = ::poll(&pf, 1, m->timeout_msec);
 			if(ret < 0) {
 				if(errno == EINTR) { continue; }
-				goto errno_error;
+				goto error;
 			}
 
 			if(ret == 0) {
 				errno = ETIMEDOUT;
-				goto specific_error;
+				goto error;
 			}
 
 			{
@@ -103,20 +103,19 @@ public:
 				int len = sizeof(value);
 				if(::getsockopt(fd, SOL_SOCKET, SO_ERROR,
 						&value, (socklen_t*)&len) < 0) {
-					goto errno_error;
+					goto error;
 				}
 				if(value != 0) {
-					err = value;
-					goto specific_error;
+					errno = value;
+					goto error;
 				}
 				goto out;
 			}
 		}
 
-	errno_error:
+	error:
 		err = errno;
 
-	specific_error:
 		::close(fd);
 		fd = -1;
 
