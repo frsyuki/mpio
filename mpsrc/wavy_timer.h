@@ -52,12 +52,10 @@ private:
 };
 
 
-class timer_handler : kernel_timer, public basic_handler {
+class timer_handler : public kernel_timer, public basic_handler {
 public:
-	typedef loop::timer_callback_t timer_callback_t;
-
 	timer_handler(kernel& kern, const timespec* value, const timespec* interval,
-			timer_callback_t callback) :
+			function<bool ()> callback) :
 		kernel_timer(kern, value, interval),
 		basic_handler(timer_ident(), this),
 		m_periodic(interval && (interval->tv_sec != 0 || interval->tv_nsec != 0)),
@@ -74,7 +72,7 @@ public:
 
 private:
 	bool m_periodic;
-	timer_callback_t m_callback;
+	function<bool ()> m_callback;
 };
 
 

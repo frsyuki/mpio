@@ -53,12 +53,10 @@ private:
 };
 
 
-class signal_handler : kernel_signal, public basic_handler {
+class signal_handler : public kernel_signal, public basic_handler {
 public:
-	typedef loop::signal_callback_t signal_callback_t;
-
 	signal_handler(kernel& kern, int signo,
-				signal_callback_t callback) :
+				function<bool ()> callback) :
 		kernel_signal(kern, signo),
 		basic_handler(signal_ident(), this),
 		m_signo(signo), m_callback(callback),
@@ -76,7 +74,7 @@ public:
 
 private:
 	int m_signo;
-	signal_callback_t m_callback;
+	function<bool ()> m_callback;
 	scoped_signal m_signal;
 	scoped_sigprocmask m_sigmask;
 };

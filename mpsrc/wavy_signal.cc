@@ -21,7 +21,7 @@ namespace mp {
 namespace wavy {
 
 
-int loop::add_signal(int signo, signal_callback_t callback)
+int loop::add_signal(int signo, function<bool ()> callback)
 {
 	kernel& kern(ANON_impl->get_kernel());
 

@@ -22,7 +22,7 @@ namespace wavy {
 
 
 int loop::add_timer(const timespec* value, const timespec* interval,
-		timer_callback_t callback)
+		function<bool ()> callback)
 {
 	kernel& kern(ANON_impl->get_kernel());
 
@@ -41,7 +41,7 @@ static inline struct timespec sec2spec(double sec)
 }
 
 int loop::add_timer(double value_sec, double interval_sec,
-		timer_callback_t callback)
+		function<bool ()> callback)
 {
 	if(value_sec >= 0.0) {
 		if(interval_sec > 0.0) {

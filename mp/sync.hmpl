@@ -77,6 +77,11 @@ public:
 		const T* operator->() const { return &operator*(); }
 
 		operator bool() const { return m_ref != NULL; }
+
+		pthread_mutex& get_mutex()
+		{
+			return m_ref->m_mutex;
+		}
 	
 	protected:
 		sync<T>* m_ref;

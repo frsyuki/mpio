@@ -97,20 +97,16 @@ public:
 			int backlog = 1024);
 
 
-	typedef function<bool ()> timer_callback_t;
-
 	int add_timer(const timespec* value, const timespec* interval,
-			timer_callback_t callback);
+			function<bool ()> callback);
 
 	int add_timer(double value_sec, double interval_sec,
-			timer_callback_t callback);
+			function<bool ()> callback);
 
 	void remove_timer(int ident);
 
 
-	typedef function<bool ()> signal_callback_t;
-
-	int add_signal(int signo, signal_callback_t callback);
+	int add_signal(int signo, function<bool ()> callback);
 
 	void remove_signal(int ident);
 
