@@ -28,17 +28,18 @@ PREP_SOURCE = \
 		sync.hmpl \
 		wavy.hmpl
 
-PREP_TARGET = $(PREP_SOURCE:mpl=)
 EXTRA_DIST = $(PREP_SOURCE)
 
-%.h: %.hmpl
-	$(MPLEX) $< -o $@
-
-%.cc: %.ccmpl
-	$(MPLEX) $< -o $@
-
-prep: $(PREP_TARGET)
-
-prepc:
-	rm -f $(PREP_TARGET)
+#PREP_TARGET = $(PREP_SOURCE:mpl=)
+#
+#%.h: %.hmpl
+#	$(MPLEX) $< -o $@
+#
+#%.cc: %.ccmpl
+#	$(MPLEX) $< -o $@
+#
+#prep: $(PREP_TARGET)
+#
+#prepc:
+#	rm -f $(PREP_TARGET)
 

@@ -12,7 +12,6 @@ Following libraries are required to build mpio:
 
   - linux >= 2.6.18
   - g++ >= 4.1
-  - ruby >= 1.8.6
 
 Configure and install in the usual way:
 
