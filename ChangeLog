@@ -1,4 +1,11 @@
 
+2010-04-15 version 0.3.2:
+
+  * Add ./configure --disable-timerfd and --disable-signalfd option
+  * Linux < 2.6.25 (mp::wavy::add_timer is not available) and
+    Linux < 2.6.22 (mp::wavy::add_signal is not available) are
+    limitedly supported.
+
 2010-04-15 version 0.3.1:
 
   * Fixes build chain; Ruby is not required to build.
@@ -7,5 +14,4 @@
 2010-04-12 version 0.3.0:
 
   * First public release.
-
 
