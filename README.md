@@ -10,7 +10,11 @@ Multipurpose concurrent I/O framework for C++
 
 Following libraries are required to build mpio:
 
-  - linux >= 2.6.18
+  - OS
+    - Linux >= 2.6.22 + glibc >= 2.8
+	- Mac OS X >= 10.5 Leopard
+	- FreeBSD >= ?
+	- NetBSD >= ?
   - g++ >= 4.1
 
 Configure and install in the usual way:
@@ -60,4 +64,6 @@ Wavy is a multithreaded event-driven I/O library.
        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
        See the License for the specific language governing permissions and
        limitations under the License.
+
+See also NOTICE file.
 
