@@ -15,6 +15,7 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 //
+#ifndef DISABLE_SIGNALFD
 #ifndef WAVY_SIGNAL_H__
 #define WAVY_SIGNAL_H__
 
@@ -85,4 +86,5 @@ private:
 }  // namespace mp
 
 #endif /* wavy_signal.h */
+#endif
 

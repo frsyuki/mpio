@@ -15,6 +15,7 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 //
+#ifndef DISABLE_TIMERFD
 #ifndef WAVY_TIMER_H__
 #define WAVY_TIMER_H__
 
@@ -81,4 +82,5 @@ private:
 }  // namespace mp
 
 #endif /* wavy_timer.h */
+#endif
 

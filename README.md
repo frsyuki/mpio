@@ -11,7 +11,7 @@ Multipurpose concurrent I/O framework for C++
 Following libraries are required to build mpio:
 
   - OS
-    - Linux >= 2.6.22 + glibc >= 2.8
+    - Linux >= 2.6.25 + glibc >= 2.8
 	- Mac OS X >= 10.5 Leopard
 	- FreeBSD >= ?
 	- NetBSD >= ?

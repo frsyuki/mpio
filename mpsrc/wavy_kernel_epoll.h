@@ -28,14 +28,19 @@
 #include <sys/time.h>
 #include <sys/epoll.h>
 #include <sys/resource.h>
-#include <sys/timerfd.h>
 
+#ifndef DISABLE_TIMERFD
+#include <sys/timerfd.h>
+#endif
+
+#ifndef DISABLE_SIGNALFD
 // work around for glibc header signalfd.h error:expected initializer before ‘throw
 #if __GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ <= 8)
 #undef __THROW
 #define __THROW
 #endif
 #include <sys/signalfd.h>
+#endif
 
 namespace mp {
 namespace wavy {
@@ -101,6 +106,7 @@ public:
 	}
 
 
+#ifndef DISABLE_TIMERFD
 	class timer {
 	public:
 		timer() : fd(-1) { }
@@ -166,8 +172,10 @@ public:
 		}
 		return 0;
 	}
+#endif
 
 
+#ifndef DISABLE_SIGNALFD
 	class signal {
 	public:
 		signal() : fd(-1) { }
@@ -221,6 +229,7 @@ public:
 		}
 		return 0;
 	}
+#endif
 
 
 	int add_kernel(kernel* kern)
