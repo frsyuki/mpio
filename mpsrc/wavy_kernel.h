@@ -25,8 +25,6 @@
 #    define MP_WAVY_KERNEL epoll
 #  elif defined(HAVE_SYS_EVENT_H)
 #    define MP_WAVY_KERNEL kqueue
-#  elif defined(HAVE_PORT_H)
-#    define MP_WAVY_KERNEL eventport
 #  else
 #    if   defined(__linux__)
 #      define MP_WAVY_KERNEL epoll
@@ -35,9 +33,9 @@
 #    elif defined(__FreeBSD__) || defined(__NetBSD__)
 #      define MP_WAVY_KERNEL kqueue
 #    elif defined(__sun__)
-#      define MP_WAVY_KERNEL eventport
+#      error Solaris Event Port is not supported. FIXME. mpsrc/wavy_kernel_eventport.cc
 #    else
-#      define MP_WAVY_KERNEL select
+#      error This OS is not supported. FIXME. mpsrc/wavy_kernel_select.cc
 #    endif
 #  endif
 #endif

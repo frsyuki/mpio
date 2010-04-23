@@ -20,6 +20,7 @@
 #ifdef MP_EXPERIMENTAL
 
 #include <arpa/inet.h>
+#include <stdint.h>
 
 namespace mp {
 
