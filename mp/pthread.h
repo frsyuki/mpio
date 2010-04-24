@@ -255,6 +255,11 @@ public:
 		m_mutex = &mutex;
 	}
 
+	bool owns() const
+	{
+		return m_mutex != NULL;
+	}
+
 private:
 	pthread_mutex* m_mutex;
 private:
@@ -295,6 +300,11 @@ public:
 		m_mutex = &mutex;
 	}
 
+	bool owns() const
+	{
+		return m_mutex != NULL;
+	}
+
 private:
 	pthread_rwlock* m_mutex;
 private:
@@ -333,6 +343,11 @@ public:
 		unlock();
 		mutex.wrlock();
 		m_mutex = &mutex;
+	}
+
+	bool owns() const
+	{
+		return m_mutex != NULL;
 	}
 
 private:
