@@ -159,6 +159,8 @@ public:
 	void commit(int fd, xfer* xf);
 
 
+	void flush();
+
 
 	template <typename Handler>
 	shared_ptr<Handler> add_handler();

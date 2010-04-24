@@ -54,14 +54,14 @@ public:
 		throw std::logic_error("out::on_read is called");
 	}
 
-	bool empty() const
+	bool has_queue() const
 	{
-		return m_queue.empty();
+		return !m_queue.empty();
 	}
 
 	void poll_event();
 
-	void write_event(kernel::event e);
+	bool write_event(kernel::event e);
 
 	kernel::event next()
 	{
@@ -70,9 +70,15 @@ public:
 		return e;
 	}
 
+	bool empty() const
+	{
+		return m_watching == 0;
+	}
+
 private:
 	std::queue<kernel::event> m_queue;
 	kernel::backlog m_backlog;
+	volatile int m_watching;
 
 	void watch(int fd);
 	void* m_fdctx;

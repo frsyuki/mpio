@@ -49,6 +49,7 @@ public:
 	bool is_end() const;
 
 	void run_once();
+	void run_once(pthread_scoped_lock& lk);
 
 	void join();
 	void detach();
@@ -73,6 +74,8 @@ public:
 	{
 		return m_kernel;
 	}
+
+	void flush();
 
 public:
 	void thread_main();
@@ -104,6 +107,8 @@ private:
 	more_queue_t m_more_queue;
 
 	function<void ()> m_thread_init_func;
+
+	pthread_cond m_flush_cond;
 
 private:
 	shared_ptr<out> m_out;

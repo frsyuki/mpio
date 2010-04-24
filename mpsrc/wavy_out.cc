@@ -398,7 +398,7 @@ void xfer::clear()
 
 #define ANON_fdctx reinterpret_cast<xfer_impl*>(m_fdctx)
 
-out::out() : basic_handler(m_kernel.ident(), this)
+out::out() : basic_handler(m_kernel.ident(), this), m_watching(0)
 {
 	struct rlimit rbuf;
 	if(::getrlimit(RLIMIT_NOFILE, &rbuf) < 0) {
@@ -428,7 +428,7 @@ void out::poll_event()
 	}
 }
 
-void out::write_event(kernel::event e)
+bool out::write_event(kernel::event e)
 {
 	int ident = e.ident();
 
@@ -445,14 +445,17 @@ void out::write_event(kernel::event e)
 	if(!cont) {
 		m_kernel.remove(e);
 		ctx.clear();
+		return __sync_sub_and_fetch(&m_watching, 1) == 0;
 	} else {
 		m_kernel.reactivate(e);
+		return false;
 	}
 }
 
 inline void out::watch(int fd)
 {
 	m_kernel.add_fd(fd, EVKERNEL_WRITE);
+	__sync_add_and_fetch(&m_watching, 1);
 }
 
 

@@ -156,13 +156,20 @@ void loop_impl::do_task(pthread_scoped_lock& lk)
 {
 	task_t ev = m_task_queue.front();
 	m_task_queue.pop();
-	if(!m_task_queue.empty()) { m_cond.signal(); }
+
+	bool last = m_task_queue.empty();
+	if(!last) { m_cond.signal(); }
 
 	lk.unlock();
 
 	try {
 		ev();
 	} catch (...) { }
+
+	if(last) {
+		lk.relock(m_mutex);
+		m_flush_cond.broadcast();
+	}
 }
 
 void loop_impl::do_out(pthread_scoped_lock& lk)
@@ -171,7 +178,10 @@ void loop_impl::do_out(pthread_scoped_lock& lk)
 
 	lk.unlock();
 
-	m_out->write_event(ke);
+	if(m_out->write_event(ke)) {
+		lk.relock(m_mutex);
+		m_flush_cond.broadcast();
+	}
 }
 
 void loop_impl::thread_main()
@@ -192,7 +202,7 @@ void loop_impl::thread_main()
 		}
 
 		if(!m_pollable) {
-			if(!m_out->empty()) {
+			if(m_out->has_queue()) {
 				do_out(lk);
 				goto retry;
 			} else if(!m_task_queue.empty()) {
@@ -277,10 +287,14 @@ void loop_impl::thread_main()
 }
 
 
-void loop_impl::run_once()
+inline void loop_impl::run_once()
 {
 	pthread_scoped_lock lk(m_mutex);
+	run_once(lk);
+}
 
+void loop_impl::run_once(pthread_scoped_lock& lk)
+{
 	if(m_end_flag) { return; }
 
 	kernel::event ke;
@@ -292,7 +306,7 @@ void loop_impl::run_once()
 	}
 
 	if(!m_pollable) {
-		if(!m_out->empty()) {
+		if(m_out->has_queue()) {
 			do_out(lk);
 		} else if(!m_task_queue.empty()) {
 			do_task(lk);
@@ -303,7 +317,7 @@ void loop_impl::run_once()
 	} else if(!m_task_queue.empty()) {
 		do_task(lk);
 		return;
-	} else if(!m_out->empty()) {
+	} else if(m_out->has_queue()) {
 		do_out(lk);  // FIXME
 		return;
 	}
@@ -365,6 +379,22 @@ void loop_impl::run_once()
 				return;
 			}
 			m_kernel.reactivate(ke);
+		}
+	}
+}
+
+
+void loop_impl::flush()
+{
+	pthread_scoped_lock lk(m_mutex);
+	while(!m_out->empty() || !m_task_queue.empty()) {
+		if(is_running()) {
+			m_flush_cond.wait(m_mutex);
+		} else {
+			run_once(lk);
+			if(!lk.owns()) {
+				lk.relock(m_mutex);
+			}
 		}
 	}
 }
@@ -460,6 +490,8 @@ shared_handler loop::add_handler_impl(shared_handler newh)
 void loop::submit_impl(task_t f)
 	{ ANON_impl->submit_impl(f); }
 
+void loop::flush()
+	{ ANON_impl->flush(); }
 
 }  // namespace wavy
 }  // namespace mp
