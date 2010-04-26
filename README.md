@@ -27,6 +27,15 @@ Configure and install in the usual way:
 
 ## Libraries
 
+[Test cases](http://github.com/frsyuki/mpio/tree/master/test/) will give you a sample usage.
+
+  - [event handler](http://github.com/frsyuki/mpio/blob/master/test/handler.cc)
+  - [listen and connect](http://github.com/frsyuki/mpio/blob/master/test/listen_connect.cc)
+  - [timer](http://github.com/frsyuki/mpio/blob/master/test/timer.cc)
+  - [signal handling](http://github.com/frsyuki/mpio/blob/master/test/signal.cc)
+  - [mp::sync](http://github.com/frsyuki/mpio/blob/master/test/sync.cc)
+
+
 ### Wavy
 Wavy is a multithreaded event-driven I/O library.
 
