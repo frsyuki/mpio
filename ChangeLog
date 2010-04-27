@@ -1,4 +1,9 @@
 
+2010-04-27 version 0.3.3:
+
+  * Add wavy::loop::flush()
+  * Add pthread_scoped_{,rd,wr}lock::owns()
+
 2010-04-15 version 0.3.2:
 
   * Add ./configure --disable-timerfd and --disable-signalfd option
