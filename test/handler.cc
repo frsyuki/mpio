@@ -39,11 +39,34 @@ private:
 	int m_count;
 };
 
+bool timer_handler(int* count, mp::wavy::loop* lo)
+{
+	std::cout << "timer" << std::endl;
+
+	if(++(*count) >= 3) {
+		lo->end();
+		return false;
+	}
+
+	return true;
+}
+
+void my_function()
+{
+	std::cout << "ok" << std::endl;
+}
+
 void reader_main(int rpipe)
 {
 	mp::wavy::loop lo;
 
 	lo.add_handler<handler>(rpipe, &lo);
+
+	int count = 0;
+	lo.add_timer(0.1, 0.1, mp::bind(
+				&timer_handler, &count, &lo));
+
+	lo.submit(&my_function);
 
 	lo.run(4);
 }
@@ -56,11 +79,7 @@ void writer_main(int wpipe)
 		lo.write(wpipe, "test", 4);
 	}
 
-	lo.start(4);
-
-	wait(NULL);
-
-	lo.end();
+	lo.flush();
 }
 
 int main(void)
@@ -75,5 +94,7 @@ int main(void)
 	}
 
 	writer_main(pair[1]);
+
+	wait(NULL);
 }
 

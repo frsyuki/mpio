@@ -30,6 +30,28 @@
 namespace mp {
 
 
+/**
+ * stream_buffer:
+ * +-------------------------------------------+
+ * | referenced | unparsed data | unused space |
+ * +-------------------------------------------+
+ * ^            ^ data()        ^ buffer()
+ * |
+ * |            +---------------+
+ * |               data_size()
+ * |                            +--------------+
+ * |                            buffer_capacity()
+ * |
+ * |            +-> data_consumed()
+ * |
+ * |                            +-> buffer_filled()
+ * |
+ * |                          reserve_buffer() +->
+ * |
+ * +-- stream_buffer::ref (reference counter)
+ *
+ */
+
 class stream_buffer {
 public:
 	stream_buffer(size_t initial_buffer_size = MP_STREAM_BUFFER_INITIAL_BUFFER_SIZE);
@@ -53,16 +75,19 @@ public:
 		ref(const ref& o);
 		~ref();
 		void clear();
-		void push(void* d);
 		void swap(ref& x);
 	private:
 		std::vector<void*> m_array;
 		struct each_incr;
 		struct each_decr;
+	private:
+		void push(void* d);
+		void move(void* d);
+		friend class stream_buffer;
 	};
 
-	ref release();
-	void release_to(ref* to);
+	ref retain();
+	void retain_to(ref* to);
 
 private:
 	char* m_buffer;
@@ -150,6 +175,11 @@ inline void stream_buffer::ref::push(void* d)
 	incr_count(d);
 }
 
+inline void stream_buffer::ref::move(void* d)
+{
+	m_array.push_back(d);
+}
+
 inline void stream_buffer::ref::swap(ref& x)
 {
 	m_array.swap(x.m_array);
@@ -210,14 +240,14 @@ inline void stream_buffer::data_consumed(size_t len)
 }
 
 
-inline stream_buffer::ref stream_buffer::release()
+inline stream_buffer::ref stream_buffer::retain()
 {
 	ref r;
 	r.swap(m_ref);
 	return r;
 }
 
-inline void stream_buffer::release_to(ref* to)
+inline void stream_buffer::retain_to(ref* to)
 {
 	m_ref.push(m_buffer);
 	to->swap(m_ref);
@@ -261,7 +291,7 @@ inline void stream_buffer::expand_buffer(size_t len, size_t initial_buffer_size)
 		init_count(tmp);
 
 		try {
-			m_ref.push(m_buffer);
+			m_ref.move(m_buffer);
 		} catch (...) { free(tmp); throw; }
 
 		memcpy(tmp+sizeof(count_t), m_buffer+m_off, not_used);

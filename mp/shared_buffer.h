@@ -28,6 +28,28 @@
 namespace mp {
 
 
+/**
+ * shared_buffer:
+ * +-----------------------------+
+ * | filled space | unused space |
+ * +-----------------------------+
+ *                ^ buffer()
+ *
+ *                +--------------+
+ *                buffer_capacity()
+ *
+ *              reserve_buffer() +->
+ *
+ *    +----+
+ *    holded
+ *         +------+
+ *          holded (not to be freed)
+ *
+ *                +-> hold()
+ *                +-> skip()
+ *
+ */
+
 class shared_buffer {
 public:
 	shared_buffer(size_t init_size = MP_SHARED_BUFFER_INITIAL_BUFFER_SIZE);
@@ -37,14 +59,16 @@ public:
 	class ref {
 	public:
 		ref();
-		ref(void* p);
 		ref(const ref& o);
 		~ref();
 		void clear();
-		void reset(void* p);
 		void swap(ref& x);
 	private:
 		void* m;
+	private:
+		ref(void* p);
+		void reset(void* p);
+		friend class ref;
 	};
 
 	void reserve_buffer(size_t len,
@@ -53,8 +77,8 @@ public:
 	void* buffer();
 	size_t buffer_capacity() const;
 
-	ref hold_buffer(size_t size,
-			size_t init_size = MP_SHARED_BUFFER_INITIAL_BUFFER_SIZE);
+	ref hold(size_t len);
+	void skip(size_t len);
 
 private:
 	char* m_buffer;
@@ -169,7 +193,7 @@ inline size_t shared_buffer::buffer_capacity() const
 	return m_free;
 }
 
-inline void shared_buffer::reserve(size_t len, size_t init_size)
+inline void shared_buffer::reserve_buffer(size_t len, size_t init_size)
 {
 	if(get_count(m_buffer) == 1) {
 		// rewind buffer
@@ -181,19 +205,24 @@ inline void shared_buffer::reserve(size_t len, size_t init_size)
 	}
 }
 
-inline ref shared_buffer::hold_buffer(
-		size_t len, size_t init_size)
+inline ref shared_buffer::hold(size_t len)
 {
-	reserve(len, init_size);
-	char* tmp = m_buffer + m_used;
+	if(m_free < len) { len = m_free; }
 	m_used += len;
 	m_free -= len;
-	return result_ref(m_buffer);
+	return ref(m_buffer);
+}
+
+inline void shared_buffer::skip(size_t len)
+{
+	if(m_free < len) { len = m_free; }
+	m_used += len;
+	m_free -= len;
 }
 
 inline void shared_buffer::expand_buffer(size_t len, size_t init_size)
 {
-	if(m_used == sizeof(count_t)) {
+	if(m_used == sizeof(count_t) && get_count(m_buffer) == 1) {
 		size_t next_size = (m_used + m_free) * 2;
 		while(next_size < len + m_used) { next_size *= 2; }
 
