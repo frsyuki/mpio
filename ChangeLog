@@ -1,4 +1,8 @@
 
+2010-08-10 version 0.3.4:
+
+  * Fixes stream_buffer and shared_buffer
+
 2010-04-27 version 0.3.3:
 
   * Add wavy::loop::flush()
