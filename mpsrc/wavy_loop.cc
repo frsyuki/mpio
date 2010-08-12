@@ -40,11 +40,7 @@ loop_impl::loop_impl(function<void ()> thread_init_func) :
 	m_thread_init_func(thread_init_func),
 	m_end_flag(false)
 {
-	struct rlimit rbuf;
-	if(::getrlimit(RLIMIT_NOFILE, &rbuf) < 0) {
-		throw system_error(errno, "getrlimit() failed");
-	}
-	m_state = new shared_handler[rbuf.rlim_cur];
+	m_state = new shared_handler[m_kernel.max()];
 
 	// add out handler
 	{

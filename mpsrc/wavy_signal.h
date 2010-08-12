@@ -51,6 +51,10 @@ protected:
 
 private:
 	kernel::signal m_signal;
+
+private:
+	kernel_signal();
+	kernel_signal(const kernel_signal&);
 };
 
 

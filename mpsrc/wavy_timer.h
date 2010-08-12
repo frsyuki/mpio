@@ -50,6 +50,10 @@ protected:
 
 private:
 	kernel::timer m_timer;
+
+private:
+	kernel_timer();
+	kernel_timer(const kernel_timer&);
 };
 
 
