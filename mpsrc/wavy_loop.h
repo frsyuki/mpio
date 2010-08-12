@@ -58,6 +58,8 @@ public:
 
 	shared_handler add_handler_impl(shared_handler sh);
 
+	void remove_handler(int fd);
+
 	void submit_impl(task_t& f);
 
 	void set_handler(shared_handler sh)

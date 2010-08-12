@@ -151,6 +151,12 @@ shared_ptr<basic_handler> loop_impl::add_handler_impl(shared_ptr<basic_handler> 
 	return sh;
 }
 
+void loop_impl::remove_handler(int fd)
+{
+	reset_handler(fd);
+	m_kernel.remove_fd(fd, EVKERNEL_READ);
+}
+
 
 void loop_impl::do_task(pthread_scoped_lock& lk)
 {
@@ -486,6 +492,9 @@ void loop::add_thread(size_t num)
 
 shared_handler loop::add_handler_impl(shared_handler newh)
 	{ return ANON_impl->add_handler_impl(newh); }
+
+void loop::remove_handler(int fd)
+	{ ANON_impl->remove_handler(fd); }
 
 void loop::submit_impl(task_t f)
 	{ ANON_impl->submit_impl(f); }

@@ -75,6 +75,8 @@ public:
 	void add_thread(size_t num);
 
 
+	void remove_handler(int fd);
+
 
 	typedef function<void (int fd, int err)> connect_callback_t;
 
