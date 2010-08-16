@@ -1,4 +1,9 @@
 
+2010-08-16 version 0.3.5:
+
+  * Adds wavy::loop::remove_handler
+  * Fixes SEGV on kqueue-based system
+
 2010-08-10 version 0.3.4:
 
   * Fixes stream_buffer and shared_buffer
