@@ -65,6 +65,7 @@ public:
 	bool is_running() const;
 
 	void run_once();
+	void run_nonblock();
 
 	void end();
 	bool is_end() const;

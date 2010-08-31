@@ -292,10 +292,16 @@ void loop_impl::thread_main()
 inline void loop_impl::run_once()
 {
 	pthread_scoped_lock lk(m_mutex);
-	run_once(lk);
+	run_once(lk, true);
 }
 
-void loop_impl::run_once(pthread_scoped_lock& lk)
+inline void loop_impl::run_nonblock()
+{
+	pthread_scoped_lock lk(m_mutex);
+	run_once(lk, false);
+}
+
+void loop_impl::run_once(pthread_scoped_lock& lk, bool block)
 {
 	if(m_end_flag) { return; }
 
@@ -308,11 +314,12 @@ void loop_impl::run_once(pthread_scoped_lock& lk)
 	}
 
 	if(!m_pollable) {
+		do_queue:
 		if(m_out->has_queue()) {
 			do_out(lk);
 		} else if(!m_task_queue.empty()) {
 			do_task(lk);
-		} else {
+		} else if(block) {
 			m_cond.wait(m_mutex);
 		}
 		return;
@@ -328,11 +335,14 @@ void loop_impl::run_once(pthread_scoped_lock& lk)
 		m_pollable = false;
 		lk.unlock();
 
-		int num = m_kernel.wait(&m_backlog, 1000);
+		int num = m_kernel.wait(&m_backlog, block ? 1000 : 0);
 
 		if(num <= 0) {
 			if(num == 0 || errno == EINTR || errno == EAGAIN) {
 				m_pollable = true;
+				if(!block) {
+					goto do_queue;
+				}
 				return;
 			} else {
 				throw system_error(errno, "wavy kernel event failed");
@@ -470,6 +480,9 @@ bool loop::is_running() const
 
 void loop::run_once()
 	{ ANON_impl->run_once(); }
+
+void loop::run_nonblock()
+	{ ANON_impl->run_nonblock(); }
 
 void loop::end()
 	{ ANON_impl->end(); }

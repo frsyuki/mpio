@@ -49,7 +49,9 @@ public:
 	bool is_end() const;
 
 	void run_once();
-	void run_once(pthread_scoped_lock& lk);
+	void run_nonblock();
+
+	void run_once(pthread_scoped_lock& lk, bool block = true);
 
 	void join();
 	void detach();
