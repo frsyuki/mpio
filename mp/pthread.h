@@ -432,14 +432,12 @@ try {
 		std::cerr
 			<< "thread terminated with throwing an instance of '"
 			<< abi::__cxa_demangle(typeid(e).name(), 0, 0, &status)
-			<< "'\n"
-			<< "  what():  " << e.what() << std::endl;
-
+			<< "'\n" "  what():  " << e.what() << std::endl;
+#else
 		std::cerr
 			<< "thread terminated with throwing an instance of '"
 			<< typeid(e).name()
-			<< "'\n"
-			<< "  what():  " << e.what() << std::endl;
+			<< "'\n" "  what():  " << e.what() << std::endl;
 #endif
 	} catch (...) {}
 	throw;

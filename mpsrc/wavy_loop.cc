@@ -83,7 +83,15 @@ void loop_impl::join()
 {
 	for(workers_t::iterator it(m_workers.begin());
 			it != m_workers.end(); ++it) {
-		it->join();
+		try {
+			it->join();
+		} catch (mp::pthread_error& e) {
+			if(e.code == EDEADLK) {
+				it->detach();
+			} else {
+				throw e;
+			}
+		}
 	}
 	m_workers.clear();
 }

@@ -27,29 +27,32 @@ namespace mp {
 
 
 struct system_error : std::runtime_error {
-	static std::string errno_string(int err)
+	static std::string errno_string(int errno_)
 	{
 		char buf[512];
 #if defined(__linux__)
 		char *ret;
-		ret = strerror_r(err, buf, sizeof(buf)-1);
+		ret = strerror_r(errno_, buf, sizeof(buf)-1);
 		return std::string(ret);
 #elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__) || defined(__SunOS__)
-		strerror_r(err, buf, sizeof(buf)-1);
+		strerror_r(errno_, buf, sizeof(buf)-1);
 		return std::string(buf);
 #else
-		return std::string(strerror(err));
+		return std::string(strerror(errno_));
 #endif
 	}
 
-	system_error(int err, const std::string& msg) :
-		std::runtime_error(msg + ": " + errno_string(err)) {}
+	system_error(int errno_, const std::string& msg) :
+		std::runtime_error(msg + ": " + errno_string(errno_)),
+		code(errno_) { }
+
+	int code;
 };
 
 
 struct event_error : system_error {
-	event_error(int err, const std::string& msg) :
-		system_error(errno, msg) {}
+	event_error(int errno_, const std::string& msg) :
+		system_error(errno_, msg) {}
 };
 
 
