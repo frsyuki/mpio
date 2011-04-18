@@ -68,6 +68,8 @@ linux*)
 	if test "$enable_timerfd" = "no"; then
 		CXXFLAGS="$CXXFLAGS -DDISABLE_TIMERFD"
 		CFLAGS="$CFLAGS -DDISABLE_TIMERFD"
+		AC_CHECK_LIB(rt,timer_create,,
+			AC_MSG_ERROR([Can't find rt library]))
 	else
 		AC_CHECK_HEADER(sys/timerfd.h, [],
 						AC_MSG_ERROR([sys/timerfd.h is not available.

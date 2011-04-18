@@ -15,7 +15,6 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 //
-#ifndef DISABLE_TIMERFD
 #include "wavy_timer.h"
 
 namespace mp {
@@ -75,5 +74,4 @@ void loop::remove_timer(int ident)
 
 }  // namespace wavy
 }  // namespace mp
-#endif
 

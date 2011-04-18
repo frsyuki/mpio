@@ -172,6 +172,110 @@ public:
 		}
 		return 0;
 	}
+#else // DISABLE_TIMERFD
+	class timer {
+	public:
+		timer() : fd(-1) { }
+		~timer() {
+			if(fd >= 0) {
+				timer_delete(timer_id);
+				::close(fd);
+			}
+		}
+
+		int ident() const { return fd; }
+
+	private:
+		int fd;
+		timer_t timer_id;
+		friend class kernel;
+		timer(const timer&);
+	};
+
+	static void timer_thread_handler(sigval_t val)
+	{
+		int pipefd = val.sival_int;
+		const char *p = (const char*)&val;
+		const char * const endp = p + sizeof(sigval_t);
+		while(p < endp) {
+			ssize_t wl = ::write(pipefd, p, endp - p);
+			if(wl < 0) {
+				if(errno == EINTR) continue;
+				::close(pipefd);
+				return ; //FIXME
+			}
+			p += wl;
+		}
+	}
+
+	int add_timer(timer* tm, const timespec* value, const timespec* interval)
+	{
+		int pipefd[2];
+		if(pipe(pipefd) < 0) {
+			return -1;
+		}
+
+		if(::fcntl(pipefd[0], F_SETFL, O_NONBLOCK) < 0) {
+			::close(pipefd[1]);
+			::close(pipefd[0]);
+			return -1;
+		}
+
+		struct itimerspec itimer;
+		::memset(&itimer, 0, sizeof(itimer));
+		if(interval) {
+			itimer.it_interval = *interval;
+		}
+		if(value) {
+			itimer.it_value = *value;
+		} else {
+			itimer.it_value = itimer.it_interval;
+		}
+
+		timer_t timer_id;
+		struct sigevent ev;
+		ev.sigev_notify            = SIGEV_THREAD;
+		ev.sigev_value.sival_int   = pipefd[1];
+		ev.sigev_notify_function   = kernel::timer_thread_handler;
+		ev.sigev_notify_attributes = 0;
+
+		if(timer_create(CLOCK_MONOTONIC, &ev, &timer_id) < 0) {
+			::close(pipefd[1]);
+			::close(pipefd[0]);
+			return -1;
+		}
+
+		if(timer_settime(timer_id, 0, &itimer, 0) < 0) {
+			::close(pipefd[1]);
+			::close(pipefd[0]);
+			return -1;
+		}
+
+		if(add_fd(pipefd[0], EVKERNEL_READ) < 0) {
+			::close(pipefd[1]);
+			::close(pipefd[0]);
+			return -1;
+		}
+
+		tm->fd = pipefd[0];
+		tm->timer_id = timer_id;
+
+		return pipefd[0];
+	}
+
+	int remove_timer(int ident)
+	{
+		return remove_fd(ident, EVKERNEL_READ);
+	}
+
+	static int read_timer(event e)
+	{
+		uint64_t exp;
+		if(read(e.ident(), &exp, sizeof(uint64_t)) <= 0) {
+			return -1;
+		}
+		return 0;
+	}
 #endif
 
 
