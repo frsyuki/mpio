@@ -1,4 +1,8 @@
 
+2011-04-22 version 0.3.7:
+
+  * Added POSXI timer implementation that works on linux < 2.6.25 (Kohei++)
+
 2011-02-20 version 0.3.6:
 
   * Fixes a potential dead-lock problem on wavy::loop::join
