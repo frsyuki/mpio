@@ -200,9 +200,9 @@ public:
 		while(p < endp) {
 			ssize_t wl = ::write(pipefd, p, endp - p);
 			if(wl < 0) {
-				if(errno == EINTR) continue;
+				if(errno == EINTR || errno == EAGAIN) continue;
 				::close(pipefd);
-				return ; //FIXME
+				return;
 			}
 			p += wl;
 		}
@@ -270,8 +270,8 @@ public:
 
 	static int read_timer(event e)
 	{
-		uint64_t exp;
-		if(read(e.ident(), &exp, sizeof(uint64_t)) <= 0) {
+		sigval_t val;
+		if(read(e.ident(), &val, sizeof(sigval_t)) <= 0) {
 			return -1;
 		}
 		return 0;
