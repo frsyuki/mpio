@@ -248,20 +248,20 @@ bool xfer_impl::execute(int fd, char* head, char** tail)
 				if(static_cast<size_t>(wl) >= vec[i].iov_len) {
 					wl -= vec[i].iov_len;
 				} else {
+					// modify the iovec to point to the start of the remaining data 
 					vec[i].iov_base = (void*)(((char*)vec[i].iov_base) + wl);
 					vec[i].iov_len -= wl;
 
-					if(i == 0) {
-						MP_WAVY_XFER_CONSUMED;
-					} else {
-						p += sizeof_iovec(veclen);
-						size_t left = endp - p;
-						char* filltail = fill_iovec(head, vec+i, veclen-i);
-						::memmove(filltail, p, left);
-						*tail = filltail + left;
-					}
-
-					return true;
+					// prepend the iovec(s) to other xfer_types in the list.
+					p += sizeof_iovec(veclen);
+					size_t left = endp - p;
+					char* filltail = fill_iovec(head, vec+i, veclen-i);
+					::memmove(filltail, p, left);
+					*tail = filltail + left;
+					
+					// trigger an immediate write of the next block
+					// FIXME: instead of doing this, add an EPOLLOUT event on fd somehow.
+					return xfer_impl::execute(fd, head, tail);
 				}
 			}
 
