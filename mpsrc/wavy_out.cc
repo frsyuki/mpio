@@ -251,16 +251,11 @@ bool xfer_impl::execute(int fd, char* head, char** tail)
 					vec[i].iov_base = (void*)(((char*)vec[i].iov_base) + wl);
 					vec[i].iov_len -= wl;
 
-					if(i == 0) {
-						MP_WAVY_XFER_CONSUMED;
-					} else {
-						p += sizeof_iovec(veclen);
-						size_t left = endp - p;
-						char* filltail = fill_iovec(head, vec+i, veclen-i);
-						::memmove(filltail, p, left);
-						*tail = filltail + left;
-					}
-
+					p += sizeof_iovec(veclen);
+					size_t left = endp - p;
+					char* filltail = fill_iovec(head, vec+i, veclen-i);
+					::memmove(filltail, p, left);
+					*tail = filltail + left;
 					return true;
 				}
 			}

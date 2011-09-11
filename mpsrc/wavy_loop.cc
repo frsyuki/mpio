@@ -211,7 +211,7 @@ void loop_impl::thread_main()
 			goto process_handler;
 		}
 
-		if(!m_pollable) {
+		if(m_pollable) {
 			if(m_out->has_queue()) {
 				do_out(lk);
 				goto retry;
