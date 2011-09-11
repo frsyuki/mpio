@@ -211,11 +211,12 @@ void loop_impl::thread_main()
 			goto process_handler;
 		}
 
-		if(m_pollable) {
-			if(m_out->has_queue()) {
-				do_out(lk);
-				goto retry;
-			} else if(!m_task_queue.empty()) {
+		if(m_out->has_queue()) {
+			do_out(lk);
+			goto retry;
+		}
+		if(!m_pollable) {
+			if(!m_task_queue.empty()) {
 				do_task(lk);
 				goto retry;
 			} else {
