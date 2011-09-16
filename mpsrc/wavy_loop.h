@@ -51,7 +51,7 @@ public:
 	void run_once();
 	void run_nonblock();
 
-	void run_once(pthread_scoped_lock& lk, bool block = true);
+	bool run_once(pthread_scoped_lock& lk, int timeout_ms);
 
 	void join();
 	void detach();
@@ -85,15 +85,12 @@ public:
 	void thread_main();
 	inline void do_task(pthread_scoped_lock& lk);
 	inline void do_out(pthread_scoped_lock& lk);
-	inline void event_more(kernel::event ke);
-	inline void event_next(kernel::event ke);
 	inline void event_remove(kernel::event ke);
 
 private:
 	volatile size_t m_off;
 	volatile size_t m_num;
 	volatile bool m_pollable;
-//	volatile pthread_t m_poll_thread;  // FIXME signal_stop
 
 	kernel::backlog m_backlog;
 
@@ -102,13 +99,12 @@ private:
 	kernel m_kernel;
 
 	pthread_mutex m_mutex;
-	pthread_cond m_cond;
+
+	int m_eventfd;
+	void wake_epoll();
 
 	typedef std::queue<task_t> task_queue_t;
 	task_queue_t m_task_queue;
-
-	typedef std::queue<kernel::event> more_queue_t;
-	more_queue_t m_more_queue;
 
 	function<void ()> m_thread_init_func;
 

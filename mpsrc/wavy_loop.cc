@@ -17,6 +17,8 @@
 //
 #include "wavy_loop.h"
 #include "wavy_out.h"
+#include <glog/logging.h>
+#include <sys/eventfd.h>
 #include <sys/types.h>
 #include <sys/resource.h>
 #include <unistd.h>
@@ -34,13 +36,14 @@ namespace mp {
 namespace wavy {
 namespace {
 
-
 loop_impl::loop_impl(function<void ()> thread_init_func) :
 	m_off(0), m_num(0), m_pollable(true),
 	m_thread_init_func(thread_init_func),
 	m_end_flag(false)
 {
 	m_state = new shared_handler[m_kernel.max()];
+
+	m_eventfd = eventfd(0, 0);
 
 	// add out handler
 	{
@@ -54,23 +57,21 @@ loop_impl::~loop_impl()
 {
 	end();
 	join();  // FIXME detached?
-	{
-		pthread_scoped_lock lk(m_mutex);
-		m_cond.broadcast();
-	}
 	delete[] m_state;
+	close(m_eventfd);
+}
+
+void loop_impl::wake_epoll()
+{
+	DLOG(INFO) << "loop_impl::wake_epoll";
+	eventfd_t val = 1;
+	eventfd_write(m_eventfd, val);
 }
 
 void loop_impl::end()
 {
 	m_end_flag = true;
-	{
-		pthread_scoped_lock lk(m_mutex);
-		m_cond.broadcast();
-//		if(m_poll_thread) {  // FIXME signal_stop
-//			pthread_kill(m_poll_thread, SIGALRM);
-//		}
-	}
+	wake_epoll();
 }
 
 bool loop_impl::is_end() const
@@ -117,6 +118,7 @@ void loop_impl::start(size_t num)
 
 void loop_impl::add_thread(size_t num)
 {
+	DLOG(INFO) << "loop_impl::add_thread";
 	for(size_t i=0; i < num; ++i) {
 		m_workers.push_back( pthread_thread() );
 		try {
@@ -136,14 +138,16 @@ bool loop_impl::is_running() const
 
 void loop_impl::submit_impl(task_t& f)
 {
+	DLOG(INFO) << "loop_impl::submit_impl";
 	pthread_scoped_lock lk(m_mutex);
 	m_task_queue.push(f);
-	m_cond.signal();
+	wake_epoll();
 }
 
 
 shared_ptr<basic_handler> loop_impl::add_handler_impl(shared_ptr<basic_handler> sh)
 {
+	DLOG(INFO) << "loop_impl::add_handler_impl for fd " << sh->ident();
 	int fd = sh->ident();
 	if(::fcntl(fd, F_SETFL, O_NONBLOCK) < 0) {
 		throw system_error(errno, "failed to set nonblock flag");
@@ -157,6 +161,7 @@ shared_ptr<basic_handler> loop_impl::add_handler_impl(shared_ptr<basic_handler> 
 
 void loop_impl::remove_handler(int fd)
 {
+	DLOG(INFO) << "loop_impl::remove_handler for fd " << fd;
 	reset_handler(fd);
 	m_kernel.remove_fd(fd, EVKERNEL_READ);
 }
@@ -164,219 +169,111 @@ void loop_impl::remove_handler(int fd)
 
 void loop_impl::do_task(pthread_scoped_lock& lk)
 {
+	DLOG(INFO) << "loop_impl::do_task";
 	task_t ev = m_task_queue.front();
 	m_task_queue.pop();
 
-	bool last = m_task_queue.empty();
-	if(!last) { m_cond.signal(); }
-
 	lk.unlock();
-
 	try {
 		ev();
 	} catch (...) { }
+	lk.relock(m_mutex);
 
-	if(last) {
-		lk.relock(m_mutex);
-		m_flush_cond.broadcast();
+	if(!m_task_queue.empty()) {
+		wake_epoll();
 	}
 }
 
 void loop_impl::do_out(pthread_scoped_lock& lk)
 {
+	DLOG(INFO) << "loop_impl::do_out";
 	kernel::event ke = m_out->next();
 
 	lk.unlock();
-
-	if(m_out->write_event(ke)) {
-		lk.relock(m_mutex);
-		m_flush_cond.broadcast();
+	bool ret = m_out->write_event(ke);
+	lk.relock(m_mutex);
+	if(ret) {
+		wake_epoll();
 	}
 }
 
 void loop_impl::thread_main()
 {
-	retry:
-	while(true) {
-		pthread_scoped_lock lk(m_mutex);
-
-		retry_task:
-		if(m_end_flag) { break; }
-
-		kernel::event ke;
-
-		if(!m_more_queue.empty()) {
-			ke = m_more_queue.front();
-			m_more_queue.pop();
-			goto process_handler;
-		}
-
-		if(m_out->has_queue()) {
-			do_out(lk);
-			goto retry;
-		}
-		if(!m_pollable) {
-			if(!m_task_queue.empty()) {
-				do_task(lk);
-				goto retry;
-			} else {
-				m_cond.wait(m_mutex);
-				goto retry_task;
-			}
-		} else if(m_task_queue.size() > MP_WAVY_TASK_QUEUE_LIMIT) {
-			do_task(lk);
-			goto retry;
-		}
-
-		if(m_num == m_off) {
-			m_pollable = false;
-//m_poll_thread = pthread_self();  // FIXME signal_stop
-			lk.unlock();
-
-			retry_poll:
-			int num = m_kernel.wait(&m_backlog, 1000);
-
-			if(num <= 0) {
-				if(num == 0 || errno == EINTR || errno == EAGAIN) {
-					if(m_end_flag) {
-						m_pollable = true;
-						break;
-					}
-					goto retry_poll;
-				} else {
-					throw system_error(errno, "wavy kernel event failed");
-				}
-			}
-
-			lk.relock(m_mutex);
-			m_off = 0;
-			m_num = num;
-
-//m_poll_thread = 0;  // FIXME signal_stop
-			m_pollable = true;
-			m_cond.signal();
-		}
-
-		ke = m_backlog[m_off++];
-
-		process_handler:
-		int ident = ke.ident();
-
-		if(ident == m_out->ident()) {
-			m_out->poll_event();
-			lk.unlock();
-
-			m_kernel.reactivate(ke);
-
-		} else {
-			lk.unlock();
-
-			event_impl e(this, ke);
-			shared_handler h = m_state[ident];
-
-			bool cont = false;
-			if(h) {
-				try {
-					cont = (*h)(e);
-				} catch (...) { }
-			}
-
-			if(!e.is_reactivated()) {
-				if(e.is_removed()) {
-					goto retry;
-				}
-				if(!cont) {
-					m_kernel.remove(ke);
-					reset_handler(ident);
-					goto retry;
-				}
-				m_kernel.reactivate(ke);
-			}
-		}
-
+	pthread_scoped_lock lk(m_mutex);
+	while(!m_end_flag) {
+		run_once(lk, 1000);
 	}  // while(true)
 }
 
 
 inline void loop_impl::run_once()
 {
+	DLOG(INFO) << "loop_impl::run_once";
 	pthread_scoped_lock lk(m_mutex);
-	run_once(lk, true);
+	run_once(lk, 1000);
 }
 
 inline void loop_impl::run_nonblock()
 {
+	DLOG(INFO) << "loop_impl::run_nonblock";
 	pthread_scoped_lock lk(m_mutex);
-	run_once(lk, false);
+	run_once(lk, 0);
 }
 
-void loop_impl::run_once(pthread_scoped_lock& lk, bool block)
+bool loop_impl::run_once(pthread_scoped_lock& lk, int timeout_ms)
 {
-	if(m_end_flag) { return; }
+	DLOG(INFO) << "loop_impl::run_once with timeout " << timeout_ms << "ms";
+	if(m_end_flag) { return true; }
 
 	kernel::event ke;
 
-	if(!m_more_queue.empty()) {
-		ke = m_more_queue.front();
-		m_more_queue.pop();
-		goto process_handler;
-	}
+	DLOG(INFO) << "m_task_queue.size() is " << m_task_queue.size();
 
-	if(!m_pollable) {
-		do_queue:
-		if(m_out->has_queue()) {
-			do_out(lk);
-		} else if(!m_task_queue.empty()) {
-			do_task(lk);
-		} else if(block) {
-			m_cond.wait(m_mutex);
-		}
-		return;
-	} else if(!m_task_queue.empty()) {
+	if(!m_task_queue.empty()) {
+		DLOG(INFO) << "Queued task found. Running.";
 		do_task(lk);
-		return;
-	} else if(m_out->has_queue()) {
-		do_out(lk);  // FIXME
-		return;
+		return true;
 	}
-
+	if(m_out->has_queue()) {
+		DLOG(INFO) << "Queued pending write found. Executing.";
+		do_out(lk);  // FIXME
+		return true;
+	}
 	if(m_num == m_off) {
-		m_pollable = false;
 		lk.unlock();
-
-		int num = m_kernel.wait(&m_backlog, block ? 1000 : 0);
-
+		m_kernel.add_fd(m_eventfd, EVKERNEL_READ);
+		int num = m_kernel.wait(&m_backlog, timeout_ms);
+		lk.relock(m_mutex);
 		if(num <= 0) {
-			if(num == 0 || errno == EINTR || errno == EAGAIN) {
-				m_pollable = true;
-				if(!block) {
-					goto do_queue;
-				}
-				return;
-			} else {
+			if(num != 0 && errno != EINTR && errno != EAGAIN) {
 				throw system_error(errno, "wavy kernel event failed");
 			}
+			return false;
 		}
 
-		lk.relock(m_mutex);
 		m_off = 0;
 		m_num = num;
-
-		m_pollable = true;
-		m_cond.signal();
 	}
 
 	ke = m_backlog[m_off++];
 
-	process_handler:
 	int ident = ke.ident();
 
-	if(ident == m_out->ident()) {
+	if(ident == m_eventfd) {
+		// We just use this to wake up an epoll thread when we have an event to do.
+		// The actual data doesn't matter.
+		eventfd_t val;
+		eventfd_read(m_eventfd, &val);
+		DLOG(INFO) << "Read eventfd wakeup event val: " << val;
+	} else if(ident == m_out->ident()) {
+		// The asynchronous write events are handled in a separate event kernel.
+		// We add this second kernel to our main event queue and poll it whenever an
+		// event occurs on it.
+		DLOG(INFO) << "Activity on output event kernel. Polling.";
 		m_out->poll_event();
+		DLOG(INFO) << "m_out has " << (m_out->has_queue() ? "pending events" : "no events");
 		lk.unlock();
-
 		m_kernel.reactivate(ke);
-
 	} else {
 		lk.unlock();
 
@@ -385,81 +282,52 @@ void loop_impl::run_once(pthread_scoped_lock& lk, bool block)
 
 		bool cont = false;
 		if(h) {
+			DLOG(INFO) << "Read event with state handler for fd " << ident << ". Executing.";
 			try {
 				cont = (*h)(e);
 			} catch (...) { }
+		} else {
+			DLOG(INFO) << "Read event WITHOUT state handler for fd " << ident << ".";
 		}
 
 		if(!e.is_reactivated()) {
 			if(e.is_removed()) {
-				return;
+				return true;
 			}
 			if(!cont) {
 				m_kernel.remove(ke);
 				reset_handler(ident);
-				return;
+				return true;
 			}
 			m_kernel.reactivate(ke);
-		}
+		} 
 	}
+	return true;
 }
 
 
 void loop_impl::flush()
 {
+	DLOG(INFO) << "loop_impl::flush";
 	pthread_scoped_lock lk(m_mutex);
 	while(!m_out->empty() || !m_task_queue.empty()) {
 		if(is_running()) {
 			m_flush_cond.wait(m_mutex);
 		} else {
-			run_once(lk);
-			if(!lk.owns()) {
-				lk.relock(m_mutex);
-			}
+			run_once(lk, 1000);
 		}
 	}
 }
 
-
-void loop_impl::event_more(kernel::event ke)
-{
-	pthread_scoped_lock lk(m_mutex);
-	m_more_queue.push(ke);
-	m_cond.signal();
-}
-
-void loop_impl::event_next(kernel::event ke)
-{
-	m_kernel.reactivate(ke);
-}
-
 void loop_impl::event_remove(kernel::event ke)
 {
+	DLOG(INFO) << "loop_impl::event_remove for fd " << ke.ident();
 	m_kernel.remove(ke);
 	reset_handler(ke.ident());
 }
 
 
 }  // noname namespace
-
-
-void event::more()
-{
-	event_impl* self = static_cast<event_impl*>(this);
-	if(!self->is_reactivated()) {
-		self->m_loop->event_more(self->m_pe);
-		self->m_flags |= 0x01;
-	}
-}
-
-void event::next()
-{
-	event_impl* self = static_cast<event_impl*>(this);
-	if(!self->is_reactivated()) {
-		self->m_loop->event_next(self->m_pe);
-		self->m_flags |= event_impl::FLAG_REACTIVATED;
-	}
-}
 
 void event::remove()
 {
@@ -469,7 +337,6 @@ void event::remove()
 		self->m_flags |= event_impl::FLAG_REMOVED;
 	}
 }
-
 
 loop::loop() : m_impl(new loop_impl()) { }
 
