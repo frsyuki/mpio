@@ -391,8 +391,6 @@ void xfer::clear()
 }
 
 
-#define ANON_fdctx reinterpret_cast<xfer_impl*>(m_fdctx)
-
 out::out() : basic_handler(m_kernel.ident(), this), m_watching(0)
 {
 	struct rlimit rbuf;
@@ -404,7 +402,7 @@ out::out() : basic_handler(m_kernel.ident(), this), m_watching(0)
 
 out::~out()
 {
-	delete[] ANON_fdctx;
+	delete[] m_fdctx;
 }
 
 void out::poll_event()
@@ -427,7 +425,7 @@ bool out::write_event(kernel::event e)
 {
 	int ident = e.ident();
 
-	xfer_impl& ctx(ANON_fdctx[ident]);
+	xfer_impl& ctx(m_fdctx[ident]);
 	pthread_scoped_lock lk(ctx.mutex());
 
 	bool cont;
@@ -456,7 +454,7 @@ inline void out::watch(int fd)
 
 void out::commit_raw(int fd, char* xfbuf, char* xfendp)
 {
-	xfer_impl& ctx(ANON_fdctx[fd]);
+	xfer_impl& ctx(m_fdctx[fd]);
 	pthread_scoped_lock lk(ctx.mutex());
 
 	if(!ctx.empty()) {
@@ -472,7 +470,7 @@ void out::commit_raw(int fd, char* xfbuf, char* xfendp)
 
 void out::commit(int fd, xfer* xf)
 {
-	xfer_impl& ctx(ANON_fdctx[fd]);
+	xfer_impl& ctx(m_fdctx[fd]);
 	pthread_scoped_lock lk(ctx.mutex());
 
 	if(!ctx.empty()) {
@@ -488,7 +486,7 @@ void out::commit(int fd, xfer* xf)
 
 void out::write(int fd, const void* buf, size_t size)
 {
-	xfer_impl& ctx(ANON_fdctx[fd]);
+	xfer_impl& ctx(m_fdctx[fd]);
 	pthread_scoped_lock lk(ctx.mutex());
 
 	if(ctx.empty()) {

@@ -29,6 +29,8 @@ struct kernel_mixin {
 	kernel m_kernel;
 };
 
+class xfer_impl;
+
 /**
  * Output buffering
  * 
@@ -104,7 +106,7 @@ private:
 	volatile int m_watching;
 
 	void watch(int fd);
-	void* m_fdctx;
+	xfer_impl* m_fdctx;
 
 private:
 	out(const out&);
