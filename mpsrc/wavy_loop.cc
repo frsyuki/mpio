@@ -55,6 +55,7 @@ loop_impl::loop_impl(function<void ()> thread_init_func) :
 
 loop_impl::~loop_impl()
 {
+	DLOG(INFO) << "loop_impl::~loop_impl";
 	end();
 	join();  // FIXME detached?
 	delete[] m_state;
@@ -82,12 +83,14 @@ bool loop_impl::is_end() const
 
 void loop_impl::join()
 {
+	DLOG(INFO) << "loop_impl::join";
 	for(workers_t::iterator it(m_workers.begin());
 			it != m_workers.end(); ++it) {
 		try {
 			it->join();
 		} catch (mp::pthread_error& e) {
 			if(e.code == EDEADLK) {
+				DLOG(ERROR) << "Deadlock joining worker thread. Detaching.";
 				it->detach();
 			} else {
 				throw e;
@@ -95,6 +98,7 @@ void loop_impl::join()
 		}
 	}
 	m_workers.clear();
+	DLOG(INFO) << "loop_impl::join ending";
 }
 
 void loop_impl::detach()
