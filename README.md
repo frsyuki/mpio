@@ -5,6 +5,11 @@ Multipurpose concurrent I/O framework for C++
 
 ## Overview
 
+This is a fork of the Multi-Purpose IO library written frsyuki. 
+I noticed some issues scheduling tasks with his original code that I've tried to fix and thought I'd have a go at documenting the code a bit.
+The wavy\_loop thread\_main is significantly simpler in this version. 
+Note: I haven't tested this on anything besides linux.
+
 
 ## Installation
 
@@ -16,6 +21,7 @@ Following libraries are required to build mpio:
 	- FreeBSD >= ?
 	- NetBSD >= ?
   - g++ >= 4.1
+  - [google logging](http://google-glog.googlecode.com/svn/trunk/doc/glog.html)
 
 Configure and install in the usual way:
 
@@ -27,13 +33,13 @@ Configure and install in the usual way:
 
 ## Libraries
 
-[Test cases](http://github.com/frsyuki/mpio/tree/master/test/) will give you a sample usage.
+[Test cases](http://github.com/aarond10/mpio/tree/master/test/) will give you a sample usage.
 
-  - [event handler](http://github.com/frsyuki/mpio/blob/master/test/handler.cc)
-  - [listen and connect](http://github.com/frsyuki/mpio/blob/master/test/listen_connect.cc)
-  - [timer](http://github.com/frsyuki/mpio/blob/master/test/timer.cc)
-  - [signal handling](http://github.com/frsyuki/mpio/blob/master/test/signal.cc)
-  - [mp::sync](http://github.com/frsyuki/mpio/blob/master/test/sync.cc)
+  - [event handler](http://github.com/aarond10/mpio/blob/master/test/handler.cc)
+  - [listen and connect](http://github.com/aarond10/mpio/blob/master/test/listen_connect.cc)
+  - [timer](http://github.com/aarond10/mpio/blob/master/test/timer.cc)
+  - [signal handling](http://github.com/aarond10/mpio/blob/master/test/signal.cc)
+  - [mp::sync](http://github.com/aarond10/mpio/blob/master/test/sync.cc)
 
 
 ### Wavy
