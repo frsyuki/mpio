@@ -232,6 +232,7 @@ bool loop_impl::run_once(pthread_scoped_lock& lk, int timeout_ms)
 	kernel::event ke;
 
 	DLOG(INFO) << "m_task_queue.size() is " << m_task_queue.size();
+	DLOG(INFO) << "m_out->size() is " << m_out->size();
 
 	if(!m_task_queue.empty()) {
 		DLOG(INFO) << "Queued task found. Running.";
@@ -276,10 +277,8 @@ bool loop_impl::run_once(pthread_scoped_lock& lk, int timeout_ms)
 		DLOG(INFO) << "Activity on output event kernel. Polling.";
 		m_out->poll_event();
 		DLOG(INFO) << "m_out has " << (m_out->has_queue() ? "pending events" : "no events");
-		lk.unlock();
 		m_kernel.reactivate(ke);
 	} else {
-		lk.unlock();
 
 		event_impl e(this, ke);
 		shared_handler h = m_state[ident];
@@ -287,9 +286,11 @@ bool loop_impl::run_once(pthread_scoped_lock& lk, int timeout_ms)
 		bool cont = false;
 		if(h) {
 			DLOG(INFO) << "Read event with state handler for fd " << ident << ". Executing.";
+			lk.unlock();
 			try {
 				cont = (*h)(e);
 			} catch (...) { }
+			lk.relock(m_mutex);
 		} else {
 			DLOG(INFO) << "Read event WITHOUT state handler for fd " << ident << ".";
 		}

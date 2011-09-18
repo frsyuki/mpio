@@ -76,6 +76,12 @@ public:
 		return !m_queue.empty();
 	}
 
+	size_t size() const
+	{
+		return m_queue.size();
+	}
+
+
 	/**
 	 * Checks the multiplexing kernel for new events and adds
 	 * any events found to the internal queue.
