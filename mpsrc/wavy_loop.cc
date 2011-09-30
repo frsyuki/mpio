@@ -77,7 +77,7 @@ void loop_impl::end()
 	DVLOG(20) << "loop_impl::end";
 	pthread_scoped_lock lk(m_mutex);
 	m_end_flag = true;
-	wake_epoll();  // Bring on the thundering herd. :)
+	wake_epoll();
 }
 
 bool loop_impl::is_end() const
@@ -185,15 +185,15 @@ void loop_impl::do_task(pthread_scoped_lock& lk)
 	task_t ev = m_task_queue.front();
 	m_task_queue.pop();
 
+	if(!m_task_queue.empty()) {
+		wake_epoll();
+	}
 	lk.unlock();
 	try {
 		ev();
 	} catch (...) { }
 	lk.relock(m_mutex);
 
-	if(!m_task_queue.empty()) {
-		wake_epoll();
-	}
 }
 
 void loop_impl::do_out(pthread_scoped_lock& lk)
@@ -215,6 +215,7 @@ void loop_impl::thread_main()
 	while(!m_end_flag) {
 		run_once(lk, 1000);
 	}  // while(true)
+	wake_epoll();
 }
 
 
@@ -255,7 +256,6 @@ bool loop_impl::run_once(pthread_scoped_lock& lk, int timeout_ms)
 		lk.unlock();
 		int num = m_kernel.wait(&m_backlog, timeout_ms);
 		lk.relock(m_mutex);
-		if(m_end_flag) return false; // TODO(aarond10): remove me
 		if(num <= 0) {
 			if(num != 0 && errno != EINTR && errno != EAGAIN) {
 				throw system_error(errno, "wavy kernel event failed");
