@@ -50,6 +50,16 @@ static const short EVKERNEL_READ  = EPOLLIN;
 static const short EVKERNEL_WRITE = EPOLLOUT;
 
 
+/**
+ * epoll_* based multiplexing kernel
+ * 
+ * Provides a means for both blocking and non-blocking listening on
+ * file descriptora, timers, signals and another kernels.
+ * 
+ * Note that kernel's can be added to each other in a tree. In such a
+ * situation, the FD event triggered by the root of the tree will be for
+ * the kernel the level down, *not* the leaf.
+ */
 class kernel {
 public:
 	kernel() : m_ep(epoll_create(MP_WAVY_KERNEL_BACKLOG_SIZE))

@@ -251,16 +251,11 @@ bool xfer_impl::execute(int fd, char* head, char** tail)
 					vec[i].iov_base = (void*)(((char*)vec[i].iov_base) + wl);
 					vec[i].iov_len -= wl;
 
-					if(i == 0) {
-						MP_WAVY_XFER_CONSUMED;
-					} else {
-						p += sizeof_iovec(veclen);
-						size_t left = endp - p;
-						char* filltail = fill_iovec(head, vec+i, veclen-i);
-						::memmove(filltail, p, left);
-						*tail = filltail + left;
-					}
-
+					p += sizeof_iovec(veclen);
+					size_t left = endp - p;
+					char* filltail = fill_iovec(head, vec+i, veclen-i);
+					::memmove(filltail, p, left);
+					*tail = filltail + left;
 					return true;
 				}
 			}
@@ -396,8 +391,6 @@ void xfer::clear()
 }
 
 
-#define ANON_fdctx reinterpret_cast<xfer_impl*>(m_fdctx)
-
 out::out() : basic_handler(m_kernel.ident(), this), m_watching(0)
 {
 	struct rlimit rbuf;
@@ -409,7 +402,7 @@ out::out() : basic_handler(m_kernel.ident(), this), m_watching(0)
 
 out::~out()
 {
-	delete[] ANON_fdctx;
+	delete[] m_fdctx;
 }
 
 void out::poll_event()
@@ -432,7 +425,7 @@ bool out::write_event(kernel::event e)
 {
 	int ident = e.ident();
 
-	xfer_impl& ctx(ANON_fdctx[ident]);
+	xfer_impl& ctx(m_fdctx[ident]);
 	pthread_scoped_lock lk(ctx.mutex());
 
 	bool cont;
@@ -461,7 +454,7 @@ inline void out::watch(int fd)
 
 void out::commit_raw(int fd, char* xfbuf, char* xfendp)
 {
-	xfer_impl& ctx(ANON_fdctx[fd]);
+	xfer_impl& ctx(m_fdctx[fd]);
 	pthread_scoped_lock lk(ctx.mutex());
 
 	if(!ctx.empty()) {
@@ -477,7 +470,7 @@ void out::commit_raw(int fd, char* xfbuf, char* xfendp)
 
 void out::commit(int fd, xfer* xf)
 {
-	xfer_impl& ctx(ANON_fdctx[fd]);
+	xfer_impl& ctx(m_fdctx[fd]);
 	pthread_scoped_lock lk(ctx.mutex());
 
 	if(!ctx.empty()) {
@@ -493,7 +486,7 @@ void out::commit(int fd, xfer* xf)
 
 void out::write(int fd, const void* buf, size_t size)
 {
-	xfer_impl& ctx(ANON_fdctx[fd]);
+	xfer_impl& ctx(m_fdctx[fd]);
 	pthread_scoped_lock lk(ctx.mutex());
 
 	if(ctx.empty()) {

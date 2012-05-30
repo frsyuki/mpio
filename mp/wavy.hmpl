@@ -46,7 +46,11 @@ class xfer;
 typedef shared_ptr<basic_handler> shared_handler;
 typedef weak_ptr<basic_handler> weak_handler;
 
-
+/**
+ * Multi-Purpose IO event loop(s).
+ * This class runs one or more threads that asynchronously process events. 
+ * It can handle file descriptors, sockets, signals, and timers.
+ */
 class loop {
 public:
 	typedef mp::wavy::basic_handler basic_handler;
@@ -58,6 +62,9 @@ public:
 
 	~loop();
 
+	/**
+	 * Start a number of worker threads.
+	 */
 	void start(size_t num);
 
 	void run(size_t num);   // run = start + join

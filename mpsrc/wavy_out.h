@@ -29,7 +29,18 @@ struct kernel_mixin {
 	kernel m_kernel;
 };
 
+class xfer_impl;
 
+/**
+ * Output buffering
+ * 
+ * Manages arbitrary asynchronous writes of arbitrary size.
+ * The loop class uses this class to perform all writes on sockets.
+ * 
+ * Internally, this class uses its own multiplexing kernel. This kernel
+ * is only used in polling mode (non-blocking) and fired from the loop
+ * classes main thread loop.
+ */
 class out : protected kernel_mixin, public basic_handler {
 public:
 	out();
@@ -49,6 +60,12 @@ public:
 		return m_kernel;
 	}
 
+	/**
+	 * handler's typically provide a method that is called whenever
+	 * an event occurs but as we are operating as a kernel here and
+	 * get special treatment in the main thread loop, this should
+	 * never get called.
+	 */
 	bool operator() (event& e)
 	{
 		throw std::logic_error("out::on_read is called");
@@ -59,10 +76,24 @@ public:
 		return !m_queue.empty();
 	}
 
+	size_t size() const
+	{
+		return m_queue.size();
+	}
+
+
+	/**
+	 * Checks the multiplexing kernel for new events and adds
+	 * any events found to the internal queue.
+	 */
 	void poll_event();
 
 	bool write_event(kernel::event e);
 
+	/**
+	 * Pops an event from the internal event queue (assumes the 
+	 * queue is not empty)
+	 */
 	kernel::event next()
 	{
 		kernel::event e = m_queue.front();
@@ -81,7 +112,7 @@ private:
 	volatile int m_watching;
 
 	void watch(int fd);
-	void* m_fdctx;
+	xfer_impl* m_fdctx;
 
 private:
 	out(const out&);

@@ -149,7 +149,7 @@ public:
 private:
 	pthread_mutex_t m_mutex;
 private:
-	pthread_mutex(const pthread_mutex&);
+	pthread_mutex(const pthread_mutex&);  // No copy constructor.
 };
 
 
