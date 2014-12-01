@@ -24,6 +24,11 @@ Configure and install in the usual way:
     $ make
     $ sudo make install
 
+For OS X, possibly replace `make` by:
+
+    $ make CPPFLAGS='-DMP_FUNCTIONAL_BOOST -DMP_MEMORY_BOOST -I/usr/local/include'
+
+
 
 ## Libraries
 
