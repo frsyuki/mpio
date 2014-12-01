@@ -41,7 +41,7 @@
 #endif
 
 #define MP_WAVY_KERNEL_HEADER(sys) \
-	MP_PP_HEADER(., wavy_kernel_, sys, )
+	MP_PP_HEADER(.,wavy_kernel_, sys, )
 
 #ifndef MP_WAVY_KERNEL_BACKLOG_SIZE
 #define MP_WAVY_KERNEL_BACKLOG_SIZE 1024
