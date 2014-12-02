@@ -19,7 +19,7 @@
 #define MP_MEMORY_H__
 
 #ifdef MP_MEMORY_BOOST
-#include <boost/tr1/memory>
+#include <boost/tr1/memory.hpp>
 namespace mp {
 	using std::tr1::shared_ptr;
 	using std::tr1::weak_ptr;
